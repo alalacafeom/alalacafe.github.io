@@ -528,7 +528,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     var items = [];
     cart.forEach(function (l) {
       var it = byId[l.id], op = optOf(l);
-      items.push({ id: l.id, qty: l.qty, price: it.price, drink: DRINK_SECTIONS.indexOf(it.sec.id) >= 0,
+      items.push({ id: l.id, qty: l.qty, price: it.price, drink: DRINK_SECTIONS.indexOf(it.sec.id) >= 0 || it.id === 'others-1',
         en: it.en + (op ? ' – ' + op.en : ''), ar: it.ar ? it.ar + (op ? ' – ' + op.ar : '') : '' });
     });
     return { action: 'order', type: API_URL ? orderType : 'dinein', table: tableValue(), name: nameValue(), address: addrValue(), phone: phoneValue(), note: $('orderNote').value.trim(), items: items };
