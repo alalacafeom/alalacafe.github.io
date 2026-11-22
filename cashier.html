@@ -172,6 +172,21 @@ svg.chart .bar2{fill:#7fb2ff}
 #invoice .ar{display:block;font-size:11px;color:#000}
 #invoice .row{display:flex;justify-content:space-between;gap:8px}
 #invoice .big{font-size:15px;font-weight:700}
+
+/* rooms */
+.bkgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 0 90px;align-items:start}
+.bkcol h3{margin:0 0 10px;color:var(--gold);font-size:18px}
+.bkcol .card{margin-bottom:10px}
+.bkn{background:rgba(217,184,97,.08);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:15px}
+.bkn .ar{display:block;font-weight:400;font-size:13px;color:var(--muted);margin-top:2px}
+.bkx{color:var(--gold);font-weight:700}
+.bkc .flag{color:var(--gold);border-color:var(--line2);background:transparent}
+.bkc.st-arrived .flag{color:var(--ok);border-color:#2f6a3a}
+.bkc.st-cancelled,.bkc.st-noshow{opacity:.5}
+.bkc.st-arrived{border-color:#2f6a3a}
+.bkl{display:block;font-size:12px;color:var(--muted)}
+.mbox select,.mbox textarea,.mbox input[type=date]{display:block;width:100%;min-height:44px;margin-top:3px;padding:8px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--line2);border-radius:10px;font:inherit}
+@media(max-width:700px){.bkgrid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -194,6 +209,7 @@ svg.chart .bar2{fill:#7fb2ff}
 <button class="tab" role="tab" aria-selected="true" data-tab="active"><span>Orders</span> <span class="ar" lang="ar" dir="rtl">الطلبات</span><span class="n" id="nActive" hidden>0</span></button>
 <button class="tab" role="tab" aria-selected="false" data-tab="pos"><span>POS</span> <span class="ar" lang="ar" dir="rtl">كاشير</span></button>
 <button class="tab" role="tab" aria-selected="false" data-tab="paid"><span>Paid</span> <span class="ar" lang="ar" dir="rtl">المدفوعة</span></button>
+<button class="tab" role="tab" aria-selected="false" data-tab="rooms"><span>Rooms</span> <span class="ar" lang="ar" dir="rtl">القاعات</span><span class="n" id="nBk" hidden>0</span></button>
 <button class="tab" role="tab" aria-selected="false" data-tab="customers"><span>Customers</span> <span class="ar" lang="ar" dir="rtl">العملاء</span></button>
 <button class="tab" role="tab" aria-selected="false" data-tab="analytics"><span>Analytics</span> <span class="ar" lang="ar" dir="rtl">التحليلات</span></button>
 </div>
@@ -205,7 +221,7 @@ svg.chart .bar2{fill:#7fb2ff}
 <button class="sbtn" id="pmode" type="button">🖨 RawBT 58mm</button>
 <button class="sbtn" id="sound" type="button">🔔 On</button>
 <button class="sbtn" id="logout" type="button">Exit · خروج</button>
-<span class="sbtn" id="ver" style="pointer-events:none;opacity:.55">v7</span>
+<span class="sbtn" id="ver" style="pointer-events:none;opacity:.55">v8</span>
 </div></header>
 
 <main class="wrap">
@@ -255,6 +271,17 @@ svg.chart .bar2{fill:#7fb2ff}
 </section>
 
 <section id="vPaid" hidden><div class="grid" id="gPaid"></div></section>
+
+<section id="vRooms" hidden>
+<div class="bar">
+<button class="btn sm" data-bk="prev" type="button">◀</button>
+<input type="date" id="bkDate" aria-label="Date">
+<button class="btn sm" data-bk="next" type="button">▶</button>
+<button class="btn sm" data-bk="today" type="button">Today · اليوم</button>
+<button class="btn primary" data-bk="new" type="button">＋ New booking · حجز جديد</button>
+</div>
+<div class="bkgrid" id="bkOut"></div>
+</section>
 
 <section id="vCustomers" hidden>
 <div class="bar">
@@ -331,16 +358,16 @@ svg.chart .bar2{fill:#7fb2ff}
       if (!d || !d.ok) { pin = ''; try { sessionStorage.removeItem('alala_pin'); } catch (e) {} if (!silent) showLoginErr('Wrong PIN · الرمز غير صحيح'); return; }
       cfg = d; STAMPS = d.stampsForFree || STAMPS;
       if (APP) { var wv = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1]; if (wv && +wv < 84) { var wb = $('ver'); wb.textContent = 'WebView ' + wv + ' قديم · حدّثه'; wb.style.cssText = 'pointer-events:none;color:#ffcc66;border-color:#ffcc66'; } }
-      if (!(d.ver >= 5)) { var vb = $('ver'); vb.textContent = 'v7 · ⚠ Apps Script قديم · حدّثه'; vb.style.cssText = 'pointer-events:none;color:#ff8a7a;border-color:#ff8a7a'; }
+      if (!(d.ver >= 7)) { var vb = $('ver'); vb.textContent = 'v8 · ⚠ Apps Script قديم · حدّثه'; vb.style.cssText = 'pointer-events:none;color:#ff8a7a;border-color:#ff8a7a'; }
       try { sessionStorage.setItem('alala_pin', p); } catch (e) {}
       $('login').hidden = true; $('app').hidden = false;
-      initAudio(); renderPause(); posInit(); refresh(); timer = setInterval(refresh, 6000);
+      initAudio(); renderPause(); posInit(); refresh(); timer = setInterval(refresh, 6000); bkInit();
     }).catch(function () { if (!silent) showLoginErr('No connection · لا يوجد اتصال'); });
   }
   $('loginBtn').addEventListener('click', function () { showLoginErr(''); tryLogin(normPin($('pin').value)); });
   $('pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('loginBtn').click(); });
   $('logout').addEventListener('click', function () {
-    clearInterval(timer); pin = ''; seen = null; try { sessionStorage.removeItem('alala_pin'); } catch (e) {}
+    clearInterval(timer); clearInterval(bkTimer); pin = ''; seen = null; try { sessionStorage.removeItem('alala_pin'); } catch (e) {}
     $('app').hidden = true; $('login').hidden = false; $('pin').value = '';
   });
 
@@ -513,14 +540,120 @@ svg.chart .bar2{fill:#7fb2ff}
       }).catch(function () { busy = false; alert('No connection · لا يوجد اتصال'); });
     }
   });
-  var VIEWS = { active: 'vActive', pos: 'vPos', paid: 'vPaid', customers: 'vCustomers', analytics: 'vAnalytics' };
+  var VIEWS = { active: 'vActive', pos: 'vPos', paid: 'vPaid', rooms: 'vRooms', customers: 'vCustomers', analytics: 'vAnalytics' };
   function setTab(name) {
     tab = name;
     q('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'); });
     Object.keys(VIEWS).forEach(function (k) { $(VIEWS[k]).hidden = k !== name; });
+    if (name === 'rooms') { renderBookings(); loadBookings(); }
     if (name === 'customers') loadCustomers();
     if (name === 'analytics' && !$('rOut').innerHTML) loadAnalytics();
   }
+
+  // ---- room bookings (tab "Rooms") ----
+  var bk = { list: [], date: '', today: '', nowMin: 0, free: 120, rate: 1000, seen: null, ok: true }, bkTimer = 0;
+  var BK_SRC = { online: 'Website · الموقع', call: 'Call · اتصال', instagram: 'Instagram · إنستغرام', whatsapp: 'WhatsApp · واتساب', walkin: 'Walk-in · حضور', pos: 'Cashier · كاشير' };
+  var BK_ST = { confirmed: 'Confirmed · مؤكد', arrived: 'Arrived · وصل', done: 'Done · انتهى', cancelled: 'Cancelled · ملغي', noshow: 'No-show · لم يحضر' };
+  function two(n) { return n < 10 ? '0' + n : '' + n; }
+  function bkFmt(m) { m = m % 1440; if (m === 0) return '12:00 am'; var h = Math.floor(m / 60), ap = h >= 12 ? 'pm' : 'am'; return (h % 12 || 12) + ':' + two(m % 60) + ' ' + ap; }
+  function bkEnd(m) { return m >= 1440 ? '12:00 am' : bkFmt(m); }
+  function bkOmr(b) { return (b / 1000).toFixed(3).replace(/\.?0+$/, '') || '0'; }
+  function bkShift(ymd, n) { var p = ymd.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2], 12); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()); }
+  function bkById(id) { return bk.list.filter(function (b) { return String(b.id) === String(id); })[0]; }
+  function bkInit() { clearInterval(bkTimer); loadBookings(); bkTimer = setInterval(loadBookings, 20000); }
+  function loadBookings() {
+    return get({ action: 'bookings', pin: pin }).then(function (d) {
+      if (!d || !d.ok) { bk.ok = false; renderBookings(); return; }
+      bk.ok = true; bk.list = d.bookings; bk.today = d.today; bk.nowMin = d.nowMin; bk.free = d.free; bk.rate = d.rate;
+      if (!bk.date) bk.date = d.today;
+      var ids = {}, fresh = [];
+      bk.list.forEach(function (b) { ids[b.id] = 1; if (bk.seen && !bk.seen[b.id] && b.status === 'confirmed' && b.source === 'online') fresh.push(b); });
+      bk.seen = ids;
+      if (fresh.length) { beep(); fresh.forEach(function (b) { if (autoPrint && canPrint()) { try { printBooking(b); } catch (e) {} } }); }
+      var up = bk.list.filter(function (b) { return b.date === bk.today && b.status === 'confirmed'; }).length;
+      $('nBk').textContent = up; $('nBk').hidden = !up;
+      if (tab === 'rooms') renderBookings();
+    }).catch(function () {});
+  }
+  function bkCard(b) {
+    var h = '<div class="card bkc st-' + b.status + '"><div class="hd"><b style="font-size:17px">' + bkFmt(b.start) + ' – ' + bkEnd(b.start + b.mins) + '</b><span class="flag">' + esc(BK_ST[b.status] || b.status) + '</span></div>';
+    h += '<div><b>#' + b.id + ' · ' + esc(b.name) + '</b>' + (b.phone ? ' · <a href="tel:+' + esc(b.phone) + '" style="color:var(--gold)">+' + esc(b.phone) + '</a>' : '') + '<br><span style="color:var(--muted);font-size:13px">' + esc((BK_SRC[b.source] || b.source).split(' · ')[0]) + ' · ' + (b.mins / 60) + 'h</span></div>';
+    if (b.noteEn || b.note) h += '<div class="bkn"><b>' + esc(b.noteEn || b.note) + '</b>' + (b.noteEn ? '<span class="ar" lang="ar" dir="rtl">' + esc(b.note) + '</span>' : '') + '</div>';
+    if (b.extra) h += '<div class="bkx">💰 Due · المطلوب: ' + bkOmr(b.extra) + ' OMR <span style="font-weight:400;color:var(--muted)">(' + (b.mins / 60) + 'h)</span></div>';
+    h += '<div class="acts">';
+    if (b.status === 'confirmed') h += '<button class="btn ok sm" data-bk="st" data-id="' + b.id + '" data-st="arrived">Arrived · وصل</button><button class="btn sm" data-bk="st" data-id="' + b.id + '" data-st="noshow">No-show · لم يحضر</button>';
+    if (b.status === 'arrived') h += '<button class="btn primary sm" data-bk="st" data-id="' + b.id + '" data-st="done">Done · انتهى</button>';
+    if (b.status === 'confirmed' || b.status === 'arrived') h += '<button class="btn sm" data-bk="edit" data-id="' + b.id + '">✏ Edit · تعديل</button>';
+    if (b.status === 'confirmed') h += '<button class="btn bad sm" data-bk="st" data-id="' + b.id + '" data-st="cancelled">Cancel · إلغاء</button>';
+    h += '<button class="btn sm" data-bk="print" data-id="' + b.id + '">🖨</button></div></div>';
+    return h;
+  }
+  function renderBookings() {
+    var box = $('bkOut');
+    if (!bk.ok) { box.innerHTML = '<div class="empty">Could not load bookings. Update Apps Script (v7) · حدّث Apps Script</div>'; return; }
+    if (!bk.date) bk.date = bk.today || '';
+    $('bkDate').value = bk.date;
+    var day = bk.list.filter(function (b) { return b.date === bk.date; }), h = '';
+    ['A', 'B'].forEach(function (r) {
+      var rows = day.filter(function (b) { return b.room === r; });
+      var live = rows.filter(function (b) { return b.status !== 'cancelled' && b.status !== 'noshow'; });
+      h += '<div class="bkcol"><h3>Room ' + r + ' · قاعة ' + r + ' <span style="color:var(--muted);font-weight:400;font-size:13px">(' + live.length + ')</span></h3>' +
+        (rows.length ? rows.map(bkCard).join('') : '<div class="empty">No bookings · لا توجد حجوزات</div>') + '</div>';
+    });
+    box.innerHTML = h;
+  }
+  function bkOpts(from, to, step, sel, labelFn) { var o = ''; for (var v = from; v <= to; v += step) o += '<option value="' + v + '"' + (v === sel ? ' selected' : '') + '>' + labelFn(v) + '</option>'; return o; }
+  function openBooking(b) {
+    var isEdit = !!b, d = b || { date: bk.date || bk.today, room: 'A', start: 1080, mins: 120, name: '', phone: '', note: '', source: 'call' };
+    var srcs = ['call', 'instagram', 'whatsapp', 'walkin'].map(function (k) { return '<option value="' + k + '"' + (d.source === k ? ' selected' : '') + '>' + BK_SRC[k] + '</option>'; }).join('');
+    openModal('<h3>' + (isEdit ? '✏ Booking #' + d.id + ' · تعديل الحجز' : '＋ New booking · حجز جديد') + '</h3>' +
+      '<label class="bkl">Date · التاريخ<input type="date" id="bfDate" value="' + esc(d.date) + '"></label>' +
+      '<label class="bkl">Room · القاعة<select id="bfRoom"><option value="A"' + (d.room === 'A' ? ' selected' : '') + '>A</option><option value="B"' + (d.room === 'B' ? ' selected' : '') + '>B</option></select></label>' +
+      '<label class="bkl">Start · البداية<select id="bfStart">' + bkOpts(540, 1410, 30, d.start, bkFmt) + '</select></label>' +
+      '<label class="bkl">Duration · المدة<select id="bfMins">' + bkOpts(60, 360, 30, d.mins, function (m) { var x = Math.ceil(Math.max(0, m - bk.free) / 60) * bk.rate; return (m / 60) + 'h — ' + (x ? bkOmr(x) + ' OMR' : 'Free · مجانًا'); }) + '</select></label>' +
+      '<input id="bfName" placeholder="Name · الاسم" value="' + esc(d.name === 'Guest' ? '' : d.name) + '"><input id="bfPhone" type="tel" placeholder="Phone · الجوال (optional)" value="' + esc(d.phone) + '"' + (isEdit ? ' disabled' : '') + '>' +
+      (isEdit ? '' : '<label class="bkl">Booked via · طريقة الحجز<select id="bfSrc">' + srcs + '</select></label>') +
+      '<textarea id="bfNote" rows="2" placeholder="Note · ملاحظة (Arabic is translated · يُترجم)">' + esc(d.note) + '</textarea><p class="err" id="bfErr" hidden></p>' +
+      '<div class="acts"><button class="btn primary" id="bfOk">Save · حفظ</button><button class="btn" id="bfNo">Close · إغلاق</button></div>');
+    $('bfNo').onclick = closeModal;
+    $('bfOk').onclick = function () {
+      var body = { action: 'bookmod', id: isEdit ? d.id : undefined, date: $('bfDate').value, room: $('bfRoom').value, start: +$('bfStart').value, mins: +$('bfMins').value, name: $('bfName').value, note: $('bfNote').value };
+      if (!isEdit) { body.action = 'book'; body.phone = $('bfPhone').value; body.source = $('bfSrc').value; }
+      $('bfOk').disabled = true;
+      post(body).then(function (r) {
+        if (!r || !r.ok) {
+          $('bfOk').disabled = false; var m = { busy: 'This time is already booked · هذا الوقت محجوز', date: 'Invalid date · تاريخ غير صحيح', late: 'Must end by midnight · ينتهي قبل 12', start: 'Invalid start · وقت غير صحيح' };
+          var er = $('bfErr'); er.textContent = m[r && r.error] || ('Error: ' + (r && r.error)); er.hidden = false; return;
+        }
+        bk.date = body.date; closeModal(); loadBookings();
+      }).catch(function () { $('bfOk').disabled = false; var er = $('bfErr'); er.textContent = 'No connection · لا يوجد اتصال'; er.hidden = false; });
+    };
+  }
+  function printBooking(b) {
+    var R = [{ k: 'c', t: 'حجز · BOOKING #' + b.id, z: 20, b: 1 }, { k: 'c', t: 'Room ' + b.room + ' · قاعة ' + b.room, z: 26, b: 1 }, { k: 'c', t: b.date, z: 16 },
+      { k: 'c', t: bkFmt(b.start) + ' - ' + bkEnd(b.start + b.mins) + ' (' + (b.mins / 60) + 'h)', z: 20, b: 1 }, { k: 'c', t: b.name + (b.phone ? ' +' + b.phone : ''), z: 16 }];
+    if (b.extra) R.push({ k: 'c', t: 'Due: ' + bkOmr(b.extra) + ' OMR', z: 18, b: 1 });
+    if (b.noteEn || b.note) R.push({ k: 'hr' }, { k: 'l', t: 'Note: ' + (b.noteEn || b.note), z: 18, b: 1 });
+    R.push({ k: 'hr' }, { k: 'gap' });
+    if (!canPrint()) { alert('Printing needs RawBT mode · اختر RawBT'); return; }
+    rawbtPrint(R);
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-bk]') : null;
+    if (!t) return;
+    var a = t.dataset.bk, b = t.dataset.id ? bkById(t.dataset.id) : null;
+    if (a === 'prev' || a === 'next') { bk.date = bkShift(bk.date || bk.today, a === 'next' ? 1 : -1); renderBookings(); }
+    else if (a === 'today') { bk.date = bk.today; renderBookings(); }
+    else if (a === 'new') openBooking(null);
+    else if (a === 'edit' && b) openBooking(b);
+    else if (a === 'print' && b) printBooking(b);
+    else if (a === 'st' && b) {
+      if (t.dataset.st === 'cancelled' && !confirm('Cancel booking #' + b.id + '? · إلغاء الحجز؟')) return;
+      t.disabled = true;
+      post({ action: 'bookmod', id: b.id, status: t.dataset.st, cancel: t.dataset.st === 'cancelled' }).then(function () { loadBookings(); }).catch(function () { t.disabled = false; });
+    }
+  });
+  $('bkDate').addEventListener('change', function () { if (this.value) { bk.date = this.value; renderBookings(); } });
 
   // ---- POS ----
   var pos = { cart: [], type: 'counter', sec: MENU.length ? MENU[0].id : '', search: '', loy: null };
