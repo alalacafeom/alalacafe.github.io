@@ -49,6 +49,15 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
 .big{font-size:40px;color:var(--gold);font-weight:600;letter-spacing:.04em;text-align:center;margin:4px 0}
 .center{text-align:center}
 .link{background:none;border:0;color:var(--gold);text-decoration:underline;font-size:14px;padding:12px 0;margin-top:6px;display:block;width:100%;text-align:center}
+.thanks{margin:16px 0 0;font-size:16px;line-height:1.6;text-align:center}
+.thanks .ar{display:block;color:var(--gold);font-size:17px}
+.warn{margin-top:14px;padding:14px 16px;border:1.5px solid var(--warn);border-radius:14px;background:rgba(232,162,124,.08);font-size:14px;line-height:1.6}
+.warn b{display:block;color:var(--warn);font-size:17px;font-weight:600}
+.warn .ar{display:block;color:var(--warn);font-size:16px}
+.warn p{margin:8px 0 0;color:var(--fg)}
+.how{margin-top:14px;padding:12px 16px;border:1px solid var(--line2);border-radius:14px;font-size:14px;line-height:1.7}
+.how b{color:var(--gold);font-weight:500}
+.how ol{margin:6px 0 0;padding-inline-start:20px;color:var(--muted)}
 .empty{color:var(--muted);font-size:14px;padding:6px 0}
 </style>
 </head>
@@ -155,7 +164,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
     if (S.edit) {
       h += '<button type="button" class="btn danger" id="cancelB">Cancel this booking · إلغاء الحجز</button><button type="button" class="link" id="back">Keep booking · إبقاء الحجز</button>';
     } else {
-      h += '<button type="button" class="link" id="findB">I already have a booking · لدي حجز</button>';
+      h += '<button type="button" class="link" id="findB">Change or cancel my booking · تعديل أو إلغاء حجزي</button>';
     }
     app.innerHTML = h;
   }
@@ -165,12 +174,16 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
     h += '<div class="box center"><div class="sub" style="margin:0">Booking no. · رقم الحجز</div><div class="big">#' + esc(b.id) + '</div>' +
       '<b>Room ' + esc(b.room) + '</b> · ' + esc(b.date) + '<br>' + fmt(b.start) + ' – ' + fmtEnd(b.start + b.mins) + '<br>' + esc(b.name) +
       (e ? '<br><span class="price">' + omr(e) + ' OMR</span> <span style="color:var(--muted);font-size:13px">pay at the cafe · يُدفع في الكافيه</span>' : '<br><span class="price">Free · مجانًا</span>') + '</div>';
-    h += '<p class="note center">Keep your booking number and phone to change or cancel it.<span class="ar" lang="ar" dir="rtl" style="display:block">احتفظ برقم الحجز ورقم جوالك لتعديل الحجز أو إلغائه.</span></p>';
-    h += '<button type="button" class="btn" id="chg">Change or cancel · تعديل أو إلغاء</button><button type="button" class="link" id="newB">New booking · حجز جديد</button>';
+    h += '<p class="thanks">Thank you for choosing alala cafe for your booking. We look forward to serving you always.<span class="ar" lang="ar" dir="rtl">شكرًا لاختيارك ألالا كافيه للحجز، ونتطلع لخدمتك دائمًا.</span></p>';
+    h += '<div class="warn"><b>⚠ Do not forget to save your booking number: #' + esc(b.id) + '</b><span class="ar" lang="ar" dir="rtl">لا تنسَ حفظ رقم الحجز: <bdi dir="ltr">#' + esc(b.id) + '</bdi></span>' +
+      '<p>Take a screenshot of this page or write the number down. You will need it, with your phone number, to change or cancel your booking.</p>' +
+      '<p class="ar" lang="ar" dir="rtl">صوّر هذه الصفحة أو اكتب الرقم. تحتاجه مع رقم جوالك لتعديل الحجز أو إلغائه.</p></div>';
+    h += '<div class="how"><b>How to change or cancel · كيف أعدّل أو ألغي؟</b><ol><li>Open this page again · افتح هذه الصفحة مرة أخرى</li><li>Tap “Change or cancel my booking” · اضغط «تعديل أو إلغاء حجزي»</li><li>Enter your booking number and phone · اكتب رقم الحجز والجوال</li></ol></div>';
+    h += '<button type="button" class="btn" id="chg">Change or cancel now · تعديل أو إلغاء الآن</button><button type="button" class="link" id="newB">New booking · حجز جديد</button>';
     app.innerHTML = h;
   }
   function renderFind() {
-    var h = '<h1><span>Find my booking</span><span class="ar" lang="ar" dir="rtl">حجزي</span></h1>';
+    var h = '<h1><span>Change or cancel booking</span><span class="ar" lang="ar" dir="rtl">تعديل أو إلغاء الحجز</span></h1><p class="sub">Enter the booking number you saved and your phone number.<span class="ar" lang="ar" dir="rtl">اكتب رقم الحجز الذي حفظته ورقم جوالك.</span></p>';
     h += '<div class="field" style="margin-top:14px"><input id="fId" inputmode="numeric" placeholder="Booking no. · رقم الحجز" value="' + esc(S.findId || '') + '"></div>';
     h += '<div class="field"><input id="fPh" type="tel" inputmode="tel" placeholder="Phone · رقم الجوال" value="' + esc(S.phone) + '"></div>';
     if (S.err) h += '<p class="err">' + errText(S.err) + '</p>';
