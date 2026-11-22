@@ -305,6 +305,7 @@ svg.chart .bar2{fill:#7fb2ff}
   var cyc = 0, orders = [], seen = null, soundOn = true, tab = 'active', timer = 0, audioCtx = null, busy = false;
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function latin(s) { return String(s || '').replace(/[\u0660-\u0669]/g, function (c) { return c.charCodeAt(0) - 0x660; }).replace(/[\u06F0-\u06F9]/g, function (c) { return c.charCodeAt(0) - 0x6F0; }); }
   function f3(n) { return (Math.round((Number(n) || 0) * 1000) / 1000).toFixed(3); }
   function q(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
@@ -404,7 +405,7 @@ svg.chart .bar2{fill:#7fb2ff}
       '<span class="pill ' + st + '">' + label + '</span></div>';
     if (o.type === 'delivery' || o.type === 'pickup') {
       h += '<div class="deliv"><span>👤 ' + esc(o.name) + ' · <a href="tel:+' + esc(o.phone) + '">+' + esc(o.phone) + '</a> · <a href="' + waLink(o.phone) + '" target="_blank" rel="noopener">WhatsApp</a></span>' +
-        (o.type === 'delivery' ? '<span>📍 ' + esc(o.address) + ' · <a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(o.address) + '" target="_blank" rel="noopener">Map · خريطة</a></span>' : '') + '</div>';
+        (o.type === 'pickup' && o.address ? '<span>🚗 ' + esc(latin(o.address)) + '</span>' : '') + (o.type === 'delivery' ? '<span>📍 ' + esc(o.address) + ' · <a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(o.address) + '" target="_blank" rel="noopener">Map · خريطة</a></span>' : '') + '</div>';
     }
     h += '<ul class="lines">';
     var hasOff = false;
@@ -824,6 +825,7 @@ svg.chart .bar2{fill:#7fb2ff}
   function printTicket(o, silent) {
     var d = new Date(o.createdAt), R = [{ k: 'c', t: 'طلب · ORDER #' + o.id, z: 20, b: 1 }, { k: 'c', t: typeLabel(o), z: 26, b: 1 }, { k: 'c', t: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), z: 14 }];
     if (o.name) R.push({ k: 'c', t: o.name, z: 16 });
+    if (o.type === 'pickup' && o.address) R.push({ k: 'c', t: 'سيارة · CAR: ' + latin(o.address), z: 20, b: 1 });
     R.push({ k: 'hr' });
     o.items.forEach(function (l) { R.push({ k: 'l', t: l.qty + '× ' + l.en, z: 20, b: 1 }); if (l.ar) R.push({ k: 'r', t: l.ar, z: 16 }); });
     if (o.note) R.push({ k: 'hr' }, { k: 'l', t: 'ملاحظة · Note: ' + o.note, z: 16 });
