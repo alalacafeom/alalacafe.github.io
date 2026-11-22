@@ -78,7 +78,17 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 .chk .tx{display:flex;flex-direction:column;min-width:0;line-height:1.25}
 .chk .tx .en{font-size:13px;font-weight:500}
 .chk .tx .ar{font-size:12px;color:var(--muted)}
-.chk[aria-checked="true"]{border-color:var(--gold);background:rgba(217,184,97,.12)}
+.chk{padding:0;justify-content:space-between;gap:4px}
+.chk .tk{flex:1;min-width:0;min-height:46px;display:flex;align-items:center;gap:10px;padding:6px 10px;background:transparent;border:0;color:inherit;text-align:left}
+.chk .stp{display:flex;align-items:center;gap:4px;padding-inline-end:6px}
+.chk .stp .add{width:36px;height:36px;font-size:20px}
+.chk[aria-checked="true"]{grid-column:1/-1;border-color:var(--gold);background:rgba(217,184,97,.12)}
+.offers{display:flex;align-items:flex-start;gap:8px;margin-top:8px;font-size:13px;color:var(--muted);line-height:1.35}
+.offers input{width:20px;height:20px;min-height:0;margin-top:2px;accent-color:#D9B861;flex:none}
+.tlock{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.tlock button{background:none;border:0;padding:0;color:var(--gold);text-decoration:underline;font:inherit}
+#readyToast{position:fixed;top:0;left:0;right:0;z-index:99;padding:16px;text-align:center;background:var(--gold);color:var(--on-gold);font-weight:700;font-size:17px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+#readyToast[hidden]{display:none}
 .chk[aria-checked="true"] .box{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
 .opt{min-height:44px;padding:0 14px;display:flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--line2);border-radius:999px;font-size:13px}
 .opt .ar{color:var(--gold);font-size:13px}
@@ -158,6 +168,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 </style>
 </head>
 <body>
+<div id="readyToast" hidden onclick="this.hidden=true" role="alert"></div>
 <script src="config.js"></script>
 <header>
 <div class="wrap">
@@ -196,6 +207,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 <div class="field" id="tableField">
 <label for="tableNo"><span>Enter your table number</span><span class="ar" lang="ar" dir="rtl">اكتب رقم طاولتك</span></label>
 <input id="tableNo" type="number" inputmode="numeric" min="1" max="99" placeholder="e.g. 5  /  مثلاً 5">
+<p class="tlock" id="tableLock" hidden><span id="tableLockTx"></span> <button type="button" id="tableChange">Not your table? Change · ليست طاولتك؟ غيّر</button></p>
 </div>
 <div class="field" id="nameField" hidden>
 <label for="custName"><span>Your name</span><span class="ar" lang="ar" dir="rtl">اسمك</span></label>
@@ -205,6 +217,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 <label for="phone"><span>Phone for loyalty stamps (optional)</span><span class="ar" lang="ar" dir="rtl">جوالك لأختام الولاء (اختياري)</span></label>
 <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="15" placeholder="9XXXXXXX">
 <p class="loy" id="loy" hidden></p>
+<label class="offers"><input type="checkbox" id="offers"> <span>Send me offers &amp; news on WhatsApp <span class="ar" lang="ar" dir="rtl">أوافق على استلام العروض والأخبار عبر واتساب</span></span></label>
 </div>
 <div class="field" id="addrField" hidden>
 <label for="custAddr"><span>Delivery address</span><span class="ar" lang="ar" dir="rtl">عنوان التوصيل</span></label>
@@ -398,9 +411,10 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     if (it.off) return '';
     var h = '<div class="cap"><span>Tick what you want</span><span class="ar" lang="ar" dir="rtl">اختر ما تريد</span></div><div class="chk-grid">';
     it.opts.forEach(function (op, k) {
-      var on = cart.has(keyOf(it.id, k));
-      h += '<button class="chk" type="button" role="checkbox" aria-checked="' + (on ? 'true' : 'false') + '" data-tick="' + it.id + '" data-opt="' + k + '">' +
-        '<span class="box" aria-hidden="true">✓</span><span class="tx"><span class="en">' + esc(op.en) + '</span><span class="ar" lang="ar" dir="rtl">' + esc(op.ar) + '</span></span></button>';
+      var kk = keyOf(it.id, k), ln = cart.get(kk), on = !!ln;
+      h += '<div class="chk" role="group" aria-checked="' + (on ? 'true' : 'false') + '"><button class="tk" type="button" role="checkbox" aria-checked="' + (on ? 'true' : 'false') + '" data-tick="' + it.id + '" data-opt="' + k + '">' +
+        '<span class="box" aria-hidden="true">✓</span><span class="tx"><span class="en">' + esc(op.en) + '</span><span class="ar" lang="ar" dir="rtl">' + esc(op.ar) + '</span></span></button>' +
+        (on ? '<span class="stp"><button class="add" type="button" data-dec="' + it.id + '" data-opt="' + k + '" aria-label="Remove one">−</button><span class="qty">' + ln.qty + '</span><button class="add" type="button" data-add="' + it.id + '" data-opt="' + k + '" aria-label="Add one">+</button></span>' : '') + '</div>';
     });
     return h + '</div>';
   }
@@ -531,7 +545,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
       items.push({ id: l.id, qty: l.qty, price: it.price, drink: DRINK_SECTIONS.indexOf(it.sec.id) >= 0 || it.id === 'others-1',
         en: it.en + (op ? ' – ' + op.en : ''), ar: it.ar ? it.ar + (op ? ' – ' + op.ar : '') : '' });
     });
-    return { action: 'order', type: API_URL ? orderType : 'dinein', table: tableValue(), name: nameValue(), address: addrValue(), phone: phoneValue(), note: $('orderNote').value.trim(), items: items };
+    return { action: 'order', type: API_URL ? orderType : 'dinein', table: tableValue(), name: nameValue(), address: addrValue(), phone: phoneValue(), note: $('orderNote').value.trim(), items: items, offers: !!(phoneValue() && $('offers').checked) };
   }
   function loyHTML(l, big) {
     var n = l.stamps || 0, h = '<span class="dots" aria-hidden="true">';
@@ -573,7 +587,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(orderPayload()) })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (!d || !d.ok) { var er = new Error(d && d.error || 'failed'); er.code = d && d.error; throw er; }
+        if (!d || !d.ok) { var er = new Error(d && d.error || 'failed'); er.code = d && d.error; er.items = d && d.items; throw er; }
         showDone(d);
         cart.clear(); openOpts = {}; $('orderNote').value = '';
         refreshMenu(); $('bar').hidden = true;
@@ -582,6 +596,15 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
         btn.disabled = false;
         if (er && er.code === 'paused') { INFO.paused = true; updateActions(); return; }
         if (er && er.code === 'min') { needField('min'); return; }
+        if (er && er.code === 'soldout') {
+          (er.items || []).forEach(function (id) {
+            if (byId[id]) byId[id].off = true;
+            Array.from(cart.keys()).forEach(function (k) { if (cart.get(k).id === id) cart.delete(k); });
+          });
+          buildMenu(); update(); renderSheet();
+          setHint('Sorry, an item just became unavailable and was removed. Please review your order.', 'عذراً، أحد الأصناف أصبح غير متوفر وتمت إزالته. راجع طلبك.', true);
+          return;
+        }
         sendFailed = true;
         updateActions();
         setHint('Could not send. Check your connection and try again, or send on WhatsApp.', 'تعذر الإرسال. تأكد من الاتصال وحاول مجدداً أو أرسل عبر واتساب.', true);
@@ -600,7 +623,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     var o = lastOrder, ol = $('steps');
     if (!o || !TRACK) { ol.innerHTML = ''; return; }
     if (o.status === 'cancelled') {
-      ol.innerHTML = '<li class="on" style="grid-column:1/-1;padding-top:0;color:var(--warn)">Order cancelled · تم إلغاء الطلب</li>';
+      ol.innerHTML = '<li class="on" style="grid-column:1/-1;padding-top:0;color:var(--warn)">' + (o.reason === 'unavailable' ? 'Sorry, an item was unavailable and the order was cancelled · عذراً، أحد الأصناف غير متوفر وتم إلغاء الطلب' : 'Order cancelled · تم إلغاء الطلب') + '</li>';
       return;
     }
     var idx = stepIndex(o.status), labels = STEP_LABELS[o.type] || STEP_LABELS.dinein, h = '';
@@ -614,10 +637,23 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     if (!lastOrder || !API_URL) return;
     fetch(API_URL + '?action=track&id=' + lastOrder.id).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.ok || !lastOrder) return;
-      lastOrder.status = d.status; lastOrder.ahead = d.ahead || 0;
+      var was = lastOrder.status; lastOrder.status = d.status; lastOrder.ahead = d.ahead || 0; lastOrder.reason = d.cancelReason || '';
+      if (d.status === 'ready' && was !== 'ready' && was !== 'served') notifyReady();
       renderSteps(); updateChip();
       if (d.status === 'served' || d.status === 'cancelled') stopTracking();
     }).catch(function () {});
+  }
+  var rAudio = null;
+  function notifyReady() {
+    try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 500]); } catch (e) {}
+    try {
+      rAudio = rAudio || new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.25, 0.5].forEach(function (t) { var o = rAudio.createOscillator(), g = rAudio.createGain(); o.frequency.value = 880; o.connect(g); g.connect(rAudio.destination); g.gain.setValueAtTime(0.2, rAudio.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, rAudio.currentTime + t + 0.2); o.start(rAudio.currentTime + t); o.stop(rAudio.currentTime + t + 0.22); });
+    } catch (e) {}
+    var t = $('readyToast');
+    t.innerHTML = '☕ Your order is ready! · طلبك جاهز!';
+    t.hidden = false;
+    setTimeout(function () { t.hidden = true; }, 15000);
   }
   function startTracking() { if (!TRACK) return; stopTracking(); pollTrack(); trackTimer = setInterval(pollTrack, 7000); updateChip(); }
   function stopTracking() { if (trackTimer) { clearInterval(trackTimer); trackTimer = 0; } }
@@ -814,14 +850,16 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
   });
   $('orderNote').addEventListener('input', updateActions);
   $('phone').addEventListener('input', function () { updateActions(); lookupLoyalty(); });
-  try { var sp = localStorage.getItem('alala_phone'); if (sp) { $('phone').value = sp; } } catch (e) {}
+  try { var sp = localStorage.getItem('alala_phone'); if (sp) { $('phone').value = sp; } $('offers').checked = localStorage.getItem('alala_offers') === '1'; } catch (e) {}
+  $('offers').addEventListener('change', function () { try { localStorage.setItem('alala_offers', this.checked ? '1' : '0'); } catch (e) {} });
 
   // A table QR code links to the page with #table-5 (or #t5) at the end; it fills the table number.
   function readHash() {
     var m = /^#t(?:able)?-?(\d{1,2})$/i.exec(location.hash || '');
-    if (m) { $('tableNo').value = m[1]; setBanner(); updateActions(); }
+    if (m) { $('tableNo').value = m[1]; $('tableNo').readOnly = true; $('tableLock').hidden = false; $('tableLockTx').innerHTML = '🔒 Table ' + m[1] + ' · طاولة ' + m[1]; setBanner(); updateActions(); }
   }
   window.addEventListener('hashchange', readHash);
+  $('tableChange').addEventListener('click', function () { $('tableNo').readOnly = false; $('tableLock').hidden = true; $('tableNo').value = ''; $('tableNo').focus(); setBanner(); updateActions(); });
 
   ['custName', 'custAddr'].forEach(function (id) {
     $(id).addEventListener('input', function () { this.parentNode.classList.remove('bad'); updateActions(); });
