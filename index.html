@@ -143,6 +143,10 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 .loy .dot.on{background:var(--gold)}
 .loy.big{flex-direction:column;align-items:center;gap:8px;margin:14px 0;padding:14px;border:1px solid var(--line2);border-radius:14px}
 .loy.big .dot{width:18px;height:18px}
+.loy .lmsg{flex-basis:100%;display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.35;color:var(--fg)}
+.loy .lmsg .ar{font-size:14px;color:var(--muted)}
+.loy .lwin{flex-basis:100%;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--gold);color:var(--on-gold);font-weight:700;text-align:center}
+.loy .lwin .ar{color:var(--on-gold);font-weight:600}
 .loy .free{color:var(--on-gold);background:var(--gold);border-radius:999px;padding:2px 10px;font-weight:600}
 .done{padding:26px 4px 8px;text-align:center}
 .done .tick{width:56px;height:56px;margin:0 auto 12px;border-radius:50%;background:var(--gold);color:var(--on-gold);font-size:30px;line-height:56px}
@@ -224,11 +228,8 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 <textarea id="custAddr" maxlength="200" rows="2" placeholder="Area, street, house no. / المنطقة، الشارع، رقم البيت"></textarea>
 </div>
 <div class="field" id="carField" hidden>
-<label for="carColor"><span>🚗 Your car</span><span class="ar" lang="ar" dir="rtl">سيارتك</span></label>
-<select id="carColor"><option value="">Colour · اللون</option><option value="White">White · أبيض</option><option value="Black">Black · أسود</option><option value="Silver">Silver · فضي</option><option value="Grey">Grey · رمادي</option><option value="Red">Red · أحمر</option><option value="Blue">Blue · أزرق</option><option value="Green">Green · أخضر</option><option value="Brown">Brown · بني</option><option value="Gold / Beige">Gold / Beige · ذهبي / بيج</option><option value="Orange">Orange · برتقالي</option><option value="Yellow">Yellow · أصفر</option></select>
-<select id="carMake"><option value="">Car type · نوع السيارة</option><option value="Toyota">Toyota · تويوتا</option><option value="Nissan">Nissan · نيسان</option><option value="Hyundai">Hyundai · هيونداي</option><option value="Kia">Kia · كيا</option><option value="Ford">Ford · فورد</option><option value="Honda">Honda · هوندا</option><option value="Mitsubishi">Mitsubishi · ميتسوبيشي</option><option value="Lexus">Lexus · لكزس</option><option value="Mercedes">Mercedes · مرسيدس</option><option value="BMW">BMW · بي إم دبليو</option><option value="Chevrolet">Chevrolet · شيفروليه</option><option value="GMC">GMC · جي إم سي</option><option value="Suzuki">Suzuki · سوزوكي</option><option value="Mazda">Mazda · مازدا</option><option value="Land Rover">Land Rover · لاند روفر</option><option value="Jeep">Jeep · جيب</option><option value="Dodge">Dodge · دودج</option><option value="Tesla">Tesla · تسلا</option><option value="Other">Other · أخرى</option></select>
-<input id="carMakeOther" type="text" maxlength="30" placeholder="Type of car · اكتب نوع السيارة" hidden>
-<input id="carPlate" type="text" maxlength="14" autocomplete="off" placeholder="Plate number · رقم اللوحة (e.g. 1234 AB)">
+<label for="carPlate"><span>🚗 Car plate number</span><span class="ar" lang="ar" dir="rtl">رقم السيارة</span></label>
+<input id="carPlate" type="text" maxlength="14" autocomplete="off" placeholder="1234 AB  /  ١٢٣٤ أ ب">
 </div>
 <ul class="lines" id="lines"></ul>
 <div class="field">
@@ -496,22 +497,16 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
       .replace(/[\u0621-\u064A\u0671-\u06D3]/g, function (c) { return AR_LET[c] || ''; })
       .replace(/[^A-Za-z0-9 \-]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
   }
-  function carString() {
-    var mk = $('carMake').value === 'Other' ? $('carMakeOther').value.trim() : $('carMake').value;
-    return [$('carColor').value, mk, plateValue()].filter(Boolean).join(' ');
-  }
-  function carMissing() {
-    if (!$('carColor').value || !$('carMake').value || ($('carMake').value === 'Other' && !$('carMakeOther').value.trim()) || !plateValue()) return true;
-    return false;
-  }
+  function carString() { return plateValue(); }
+  function carMissing() { return !plateValue(); }
   function addrValue() { return carMode ? carString() : $('custAddr').value.trim(); }
   // returns the first thing still missing for the chosen order type, or ''
   function missing() {
     if (totals().n === 0) return 'empty';
     if (!API_URL) return tableValue() > 0 ? '' : 'table';
     if (orderType === 'dinein') return tableValue() > 0 ? '' : 'table';
-    if (!nameValue()) return 'name';
-    if (phoneValue().length < 8) return 'phone';
+    if (!carMode && !nameValue()) return 'name';
+    if (!carMode && phoneValue().length < 8) return 'phone';
     if (carMode && carMissing()) return 'car';
     if (orderType === 'delivery') {
       if (!addrValue()) return 'address';
@@ -533,8 +528,11 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     $('nameField').hidden = !(api && orderType !== 'dinein');
     $('addrField').hidden = !(api && orderType === 'delivery' && !carMode);
     $('carField').hidden = !(api && carMode);
+    var nl = $('nameField').querySelector('label');
+    if (!nl.getAttribute('data-orig')) nl.setAttribute('data-orig', nl.innerHTML);
+    nl.innerHTML = carMode ? '<span>Your name (optional)</span><span class="ar" lang="ar" dir="rtl">اسمك (اختياري)</span>' : nl.getAttribute('data-orig');
     var pl = $('phoneField').querySelector('label');
-    var need = api && orderType !== 'dinein';
+    var need = api && orderType !== 'dinein' && !carMode;
     pl.innerHTML = need ? '<span>Phone number</span><span class="ar" lang="ar" dir="rtl">رقم الجوال</span>' : '<span>Phone for loyalty stamps (optional)</span><span class="ar" lang="ar" dir="rtl">جوالك لأختام الولاء (اختياري)</span>';
     var fn = $('feeNote');
     if (api && orderType === 'delivery') {
@@ -570,15 +568,34 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
       items.push({ id: l.id, qty: l.qty, price: it.price, drink: DRINK_SECTIONS.indexOf(it.sec.id) >= 0 || it.id === 'others-1',
         en: it.en + (op ? ' – ' + op.en : ''), ar: it.ar ? it.ar + (op ? ' – ' + op.ar : '') : '' });
     });
-    return { action: 'order', type: API_URL ? orderType : 'dinein', table: tableValue(), name: nameValue(), address: addrValue(), phone: phoneValue(), note: $('orderNote').value.trim(), items: items };
+    return { action: 'order', type: API_URL ? orderType : 'dinein', table: tableValue(), name: nameValue() || (carMode ? 'Car ' + plateValue() : ''), address: addrValue(), phone: phoneValue(), note: $('orderNote').value.trim(), items: items };
   }
+  function cartDrinks() {
+    var n = 0;
+    cart.forEach(function (l) { var it = byId[l.id]; if (it && (DRINK_SECTIONS.indexOf(it.sec.id) >= 0 || it.id === 'others-1')) n += l.qty; });
+    return n;
+  }
+  function arCount(n) { return n === 1 ? 'مشروب واحد' : n === 2 ? 'مشروبين' : n + ' مشروبات'; }
   function loyHTML(l, big) {
     var n = l.stamps || 0, h = '<span class="dots" aria-hidden="true">';
     for (var k = 0; k < STAMPS; k++) h += '<span class="dot' + (k < n ? ' on' : '') + '"></span>';
     h += '</span><span>' + n + '/' + STAMPS + ' · <span class="ar" lang="ar" dir="rtl">أختامك</span></span>';
-    if (l.free > 0) h += '<span class="free">' + (l.free > 1 ? l.free + '× ' : '') + 'Free drink · مشروب مجاني</span>';
+    if (l.free > 0) {
+      h += '<span class="lwin"><span>🎁 You earned a FREE drink! Ask the cashier to apply it</span><span class="ar" lang="ar" dir="rtl">هديتك تستاهلها! مشروب مجاني، اطلبه من الكاشير</span></span>';
+    } else {
+      var rem = STAMPS - n;
+      h += '<span class="lmsg"><span>☕ ' + (rem === 1 ? 'Just 1 more drink' : 'Only ' + rem + ' more drinks') + ' and your next one is on us</span><span class="ar" lang="ar" dir="rtl">باقي ' + arCount(rem) + ' والمشروب المجاني علينا</span></span>';
+      var d = big ? 0 : cartDrinks();
+      if (d > 0) {
+        var after = n + d;
+        h += after >= STAMPS
+          ? '<span class="lwin"><span>🎉 This order unlocks your FREE drink for next time</span><span class="ar" lang="ar" dir="rtl">هذا الطلب يفتح لك مشروباً مجانياً للزيارة القادمة</span></span>'
+          : '<span class="lmsg"><span>This order adds +' + d + ' → ' + after + '/' + STAMPS + ' after payment</span><span class="ar" lang="ar" dir="rtl">هذا الطلب يضيف ' + d + ' بعد الدفع ← ' + after + '/' + STAMPS + '</span></span>';
+      }
+    }
     return h;
   }
+  var lastLoy = null;
   var loyTimer = 0;
   function lookupLoyalty() {
     var box = $('loy'), ph = phoneValue();
@@ -586,7 +603,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     if (!API_URL || ph.length < 8) { box.hidden = true; return; }
     loyTimer = setTimeout(function () {
       fetch(API_URL + '?action=loyalty&phone=' + encodeURIComponent(ph)).then(function (r) { return r.json(); }).then(function (d) {
-        if (d && d.ok && phoneValue() === ph) { box.innerHTML = loyHTML(d); box.hidden = false; }
+        if (d && d.ok && phoneValue() === ph) { lastLoy = d; box.innerHTML = loyHTML(d); box.hidden = false; }
       }).catch(function () {});
     }, 400);
   }
@@ -767,7 +784,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     table: ['Enter your table number first.', 'أدخل رقم الطاولة أولاً.', 'tableField', 'tableNo'],
     name: ['Enter your name.', 'اكتب اسمك.', 'nameField', 'custName'],
     phone: ['Enter your phone number.', 'اكتب رقم جوالك.', 'phoneField', 'phone'],
-    car: ['Choose your car colour, type and plate number.', 'اختر لون سيارتك ونوعها واكتب رقم اللوحة.', 'carField', 'carPlate'],
+    car: ['Enter your car plate number.', 'اكتب رقم سيارتك.', 'carField', 'carPlate'],
     address: ['Enter your delivery address.', 'اكتب عنوان التوصيل.', 'addrField', 'custAddr']
   };
   function needField(k) {
@@ -785,6 +802,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
   function update() {
     var t = totals();
     refreshMenu();
+    if (lastLoy && !$('loy').hidden) $('loy').innerHTML = loyHTML(lastLoy);
     $('bar').hidden = t.n === 0;
     $('barCount').textContent = t.n;
     $('barTotal').textContent = fmt(t.total);
@@ -876,12 +894,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     updateActions();
   });
   $('orderNote').addEventListener('input', updateActions);
-  ['carColor', 'carMake', 'carMakeOther', 'carPlate'].forEach(function (id) {
-    $(id).addEventListener(id === 'carPlate' || id === 'carMakeOther' ? 'input' : 'change', function () {
-      $('carMakeOther').hidden = $('carMake').value !== 'Other';
-      $('carField').classList.remove('bad'); updateActions();
-    });
-  });
+  $('carPlate').addEventListener('input', function () { $('carField').classList.remove('bad'); updateActions(); });
   $('phone').addEventListener('input', function () { updateActions(); lookupLoyalty(); });
   try { var sp = localStorage.getItem('alala_phone'); if (sp) { $('phone').value = sp; } } catch (e) {}
 

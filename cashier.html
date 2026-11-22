@@ -71,6 +71,9 @@ textarea{padding:10px 12px;min-height:60px;width:100%}
 .free{padding:1px 8px;border-radius:999px;background:var(--gold);color:var(--on-gold);font-weight:700;font-size:12px}
 .tot{display:flex;justify-content:space-between;align-items:baseline;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .tot b{font-size:20px;color:var(--gold);font-variant-numeric:tabular-nums}
+.lbanner{padding:10px 12px;border-radius:12px;background:#1d3a22;border:1px solid #2f6a3a;color:var(--ok);font-weight:700;font-size:14px;text-align:center}
+.lbanner.gold{background:var(--gold);border-color:var(--gold);color:var(--on-gold)}
+.ltoast{position:fixed;left:12px;right:12px;top:12px;z-index:90;max-width:560px;margin:0 auto;padding:16px;border-radius:16px;background:var(--gold);color:var(--on-gold);font-weight:700;font-size:17px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.6)}
 .redeem{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px dashed var(--gold);border-radius:10px;font-size:13px;color:var(--gold)}
 .redeem input{width:20px;height:20px;min-height:0;accent-color:#D9B861}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
@@ -418,9 +421,13 @@ svg.chart .bar2{fill:#7fb2ff}
     if (o.note) h += '<div class="note">📝 ' + esc(o.note) + '</div>';
     var lo = o.loyalty;
     if (o.phone && o.type !== 'delivery' && o.type !== 'pickup') h += '<div class="cust">📱 ' + esc(o.phone) + '</div>';
-    if (o.phone && lo) h += '<div class="cust">' + dotsHTML(lo.stamps) + ' <span>' + lo.stamps + '/' + STAMPS + '</span>' + (lo.free > 0 ? '<span class="free">FREE × ' + lo.free + '</span>' : '') + '</div>';
+    if (o.phone && lo) {
+      h += '<div class="cust">' + dotsHTML(lo.stamps) + ' <span>' + lo.stamps + '/' + STAMPS + '</span>' + (lo.free <= 0 ? '<span>· باقي ' + (STAMPS - lo.stamps) + ' · ' + (STAMPS - lo.stamps) + ' to free</span>' : '') + '</div>';
+      if (lo.free > 0 && open) h += '<div class="lbanner gold">🎁 مشروب مجاني مستحق' + (lo.free > 1 ? ' × ' + lo.free : '') + ' · FREE DRINK EARNED' + (lo.free > 1 ? ' × ' + lo.free : '') + '</div>';
+      else if (lo.free > 0) h += '<div class="lbanner">🎁 الزبون عنده مشروب مجاني · Customer has a free drink</div>';
+    }
     var canRedeem = open && o.phone && lo && lo.balance >= STAMPS && cheapestDrink(o) > 0;
-    if (canRedeem) h += '<label class="redeem"><input type="checkbox" data-redeem="' + o.id + '"> Free drink: −' + f3(cheapestDrink(o)) + ' · مشروب مجاني</label>';
+    if (canRedeem) h += '<label class="redeem"><input type="checkbox" data-redeem="' + o.id + '"> 🎁 طبّق المشروب المجاني · Apply free drink: −' + f3(cheapestDrink(o)) + '</label>';
     h += '<div class="tot"><span>' + (o.discount ? 'Discount −' + f3(o.discount) + ' · ' : '') + 'VAT ' + f3(o.vat) + ' · ' + (o.paidAt ? 'paid ' + timeOf(o.paidAt) : 'Total') + '</span><b>' + f3(o.total) + ' ' + CUR + '</b></div><div class="acts">';
     if (open) {
       var nx = (NEXT[o.type] || NEXT.dinein)[o.status];
@@ -468,10 +475,16 @@ svg.chart .bar2{fill:#7fb2ff}
       seen = ids; render(); if (++cyc % 5 === 1) loadMenuOff();
     }).catch(function () {});
   }
+  function loyToast(o) {
+    var t = document.createElement('div'); t.className = 'ltoast';
+    t.innerHTML = '🎁 الزبون حصل على مشروب مجاني! · Customer earned a FREE drink!<br><span style="font-size:14px;font-weight:600">+' + esc(o.phone) + ' — أخبره/ي الآن · tell them now</span>';
+    t.onclick = function () { if (t.parentNode) t.parentNode.removeChild(t); };
+    document.body.appendChild(t); setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 9000);
+  }
   function byId(id) { return orders.filter(function (o) { return String(o.id) === String(id); })[0]; }
   function afterPay(id) {
     return get({ action: 'orders', pin: pin }).then(function (r) {
-      if (r && r.ok) { orders = r.orders; render(); var o = byId(id); if (o && o.payment && autoPrint) printInvoice(o); }
+      if (r && r.ok) { orders = r.orders; render(); var o = byId(id); if (o && o.payment && autoPrint) printInvoice(o); if (o && o.payment && o.loyalty && o.loyalty.free > 0) loyToast(o); }
     });
   }
 
@@ -613,7 +626,7 @@ svg.chart .bar2{fill:#7fb2ff}
       get({ action: 'loyalty', phone: ph }).then(function (d) {
         if (!d || !d.ok || $('pPhone').value.replace(/\D/g, '') !== ph) return;
         pos.loy = d;
-        $('pLoy').innerHTML = '📱 ' + (d.name ? esc(d.name) + ' · ' : '') + dotsHTML(d.stamps) + ' ' + d.stamps + '/' + STAMPS + (d.free > 0 ? ' <span class="free">FREE × ' + d.free + '</span>' : '');
+        $('pLoy').innerHTML = '📱 ' + (d.name ? esc(d.name) + ' · ' : '') + dotsHTML(d.stamps) + ' ' + d.stamps + '/' + STAMPS + (d.free > 0 ? '<div class="lbanner gold" style="margin-top:6px">🎁 مشروب مجاني مستحق · FREE DRINK EARNED' + (d.free > 1 ? ' × ' + d.free : '') + ' — فعّله من الخانة تحت</div>' : ' · باقي ' + (STAMPS - d.stamps) + ' · ' + (STAMPS - d.stamps) + ' to free');
         $('pLoy').hidden = false;
         if (d.name && !$('pName').value) $('pName').value = d.name;
         posRenderCart();
@@ -819,7 +832,7 @@ svg.chart .bar2{fill:#7fb2ff}
     R.push({ k: 'hr' }, { k: 'row', l: 'المجموع · Subtotal', r: f3(o.subtotal) });
     discParts(o).forEach(function (d) { R.push({ k: 'row', l: d.l, r: '-' + f3(d.v) }); });
     R.push({ k: 'row', l: 'الضريبة · VAT 5%', r: f3(o.vat) }, { k: 'row', l: 'الإجمالي · Total', r: f3(o.total) + ' ' + CUR, z: 20, b: 1 }, { k: 'hr' },
-      { k: 'row', l: 'الدفع · Payment', r: o.payment === 'cash' ? 'كاش · Cash' : 'فيزا · Card' }, { k: 'gap' }, { k: 'c', t: 'شكراً لزيارتكم · Thank you', z: 14 }, { k: 'gap' }, { k: 'c', t: 'من يشرب القهوة ليس وحيداً', z: 17, b: 1 }, { k: 'logo', src: 'en', h: 44 }, { k: 'gap' });
+      { k: 'row', l: 'الدفع · Payment', r: o.payment === 'cash' ? 'كاش · Cash' : 'فيزا · Card' }, { k: 'gap' }, (o.loyalty && o.phone ? (o.loyalty.free > 0 ? { k: 'c', t: 'هديتك تستاهلها! مشروبك القادم مجاني · Your next drink is FREE', z: 16, b: 1 } : { k: 'c', t: 'أختامك ' + o.loyalty.stamps + '/' + STAMPS + ' · باقي ' + (STAMPS - o.loyalty.stamps) + ' لمشروب مجاني · ' + (STAMPS - o.loyalty.stamps) + ' to a free drink', z: 14 }) : { k: 'gap' }), { k: 'c', t: 'شكراً لزيارتكم · Thank you', z: 14 }, { k: 'gap' }, { k: 'c', t: 'من يشرب القهوة ليس وحيداً', z: 17, b: 1 }, { k: 'logo', src: 'en', h: 44 }, { k: 'gap' });
     rawbtPrint(R);
   }
   function printTicket(o, silent) {
