@@ -538,9 +538,11 @@ svg.chart .bar2{fill:#7fb2ff}
     posRenderChips(); posRenderItems(); posRenderCart();
   }
   function posRenderChips() {
-    $('posChips').innerHTML = MENU.map(function (s) { return '<button class="chip" data-psec="' + s.id + '" aria-pressed="' + (s.id === pos.sec && !pos.search) + '">' + esc(s.en) + ' · ' + esc(s.ar) + '</button>'; }).join('');
+    $('posChips').innerHTML = MENU.map(function (s) { return '<button class="chip" data-psec="' + s.id + '" aria-pressed="' + (s.id === pos.sec && !pos.search) + '">' + esc(s.en) + ' · ' + esc(s.ar) + '</button>'; }).join('') +
+      '<button class="chip" data-pna="1" aria-pressed="' + !!pos.na + '" style="border-color:rgba(255,140,120,.6)">🚫 غير متوفر · Sold out</button>';
   }
   function posRenderItems() {
+    var naHint = pos.na ? '<div class="flag" style="grid-column:1/-1">اضغط على الصنف غير المتوفر · Tap the item that is sold out</div>' : '';
     var list = [], s = pos.search.trim().toLowerCase();
     MENU.forEach(function (sec) {
       sec.items.forEach(function (it) {
@@ -549,8 +551,8 @@ svg.chart .bar2{fill:#7fb2ff}
     });
     var PH = window.ALALA_PHOTOS || {};
     function th(it) { return PH[it.id] ? '<img class="th" alt="" loading="lazy" src="' + PH[it.id] + '">' : ''; }
-    $('posItems').innerHTML = list.map(function (it) {
-      if (it.off) return '<div class="it" style="opacity:.45">' + th(it) + '<span class="en">' + esc(it.en) + '</span><span class="ar" lang="ar" dir="rtl">' + esc(it.ar) + '</span><span class="p">Sold out · نفذ</span></div>';
+    $('posItems').innerHTML = naHint + list.map(function (it) {
+      if (it.off) return '<div class="it" style="color:var(--muted)">' + th(it) + '<span class="en">' + esc(it.en) + '</span><span class="ar" lang="ar" dir="rtl">' + esc(it.ar) + '</span><span class="p">Sold out · نفذ</span><button type="button" class="na" data-restore="' + it.id + '" style="opacity:1">↩ استرجاع · Restore</button></div>';
       if (it.opts) {
         return '<div class="it has-opts">' + th(it) + '<span class="en">' + esc(it.en) + '</span><span class="ar" lang="ar" dir="rtl">' + esc(it.ar) + '</span><span class="p">' + f3(it.price / 1000) + '</span><div class="oc">' +
           it.opts.map(function (o, k) { return '<button type="button" data-padd="' + it.id + '" data-popt="' + k + '">+ ' + esc(o.en) + ' · ' + esc(o.ar) + '</button>'; }).join('') + '</div></div>';
@@ -655,9 +657,11 @@ svg.chart .bar2{fill:#7fb2ff}
   $('pSend').addEventListener('click', function () { posSubmit(''); });
   $('pClear').addEventListener('click', posClear);
   document.addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('[data-padd],[data-pdec],[data-psec],[data-ptype]') : null;
+    var b = e.target.closest ? e.target.closest('[data-padd],[data-pdec],[data-psec],[data-ptype],[data-pna]') : null;
     if (!b) return;
-    if (b.dataset.padd) posAdd(b.dataset.padd, parseInt(b.dataset.popt, 10), 1);
+    if (b.dataset.pna) { pos.na = !pos.na; posRenderChips(); posRenderItems(); }
+    else if (b.dataset.padd && pos.na) { pos.na = false; posRenderChips(); askNA(b.dataset.padd, ''); }
+    else if (b.dataset.padd) posAdd(b.dataset.padd, parseInt(b.dataset.popt, 10), 1);
     else if (b.dataset.pdec) posAdd(b.dataset.pdec, parseInt(b.dataset.popt, 10), -1);
     else if (b.dataset.psec) { pos.sec = b.dataset.psec; pos.search = ''; $('posSearch').value = ''; posRenderChips(); posRenderItems(); }
     else if (b.dataset.ptype) { pos.type = b.dataset.ptype; posApplyType(); }
