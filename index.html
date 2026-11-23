@@ -101,8 +101,8 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 .barbtn .mid .ar{font-weight:500;font-size:14px}
 .barbtn .tot{font-variant-numeric:tabular-nums}
 
-.sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.66)}
-.panel{width:100%;max-width:560px;max-height:92%;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-bottom:0;border-radius:18px 18px 0 0;padding:16px 20px calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet{position:fixed;top:0;left:0;right:0;bottom:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px 12px;background:rgba(0,0,0,.66)}
+.panel{width:100%;max-width:560px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;-webkit-overflow-scrolling:touch;background:var(--panel);border:1px solid var(--line2);border-radius:18px;padding:16px 20px 20px}
 .phead{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .phead h3{margin:0;display:flex;gap:12px;align-items:baseline;font-weight:500;font-size:18px;color:var(--gold)}
 .phead h3 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:20px}

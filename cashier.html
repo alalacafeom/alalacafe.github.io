@@ -187,6 +187,9 @@ svg.chart .bar2{fill:#7fb2ff}
 .bkl{display:block;font-size:12px;color:var(--muted)}
 .mbox select,.mbox textarea,.mbox input[type=date]{display:block;width:100%;min-height:44px;margin-top:3px;padding:8px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--line2);border-radius:10px;font:inherit}
 @media(max-width:700px){.bkgrid{grid-template-columns:1fr}}
+.tmp{display:inline-block;margin:0 8px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:700;vertical-align:middle;white-space:nowrap}
+.tmp.hot{background:rgba(255,140,100,.16);color:#ffa27d;border:1px solid rgba(255,140,100,.55)}
+.tmp.cold{background:rgba(110,190,255,.14);color:#8fd0ff;border:1px solid rgba(110,190,255,.55)}
 </style>
 </head>
 <body>
@@ -425,6 +428,18 @@ svg.chart .bar2{fill:#7fb2ff}
   var offSet = {};
 
   function waLink(phone, text) { return 'https://wa.me/' + phone + (text ? '?text=' + encodeURIComponent(text) : ''); }
+  // hot / cold label for a line, from its menu section (so the barista never has to guess)
+  function tempOf(l) {
+    var p = String(l.id || '').split('-')[0], n = String(l.en || '');
+    if (p === 'hot') return 'hot';
+    if (p === 'cold' || p === 'blends' || p === 'special') return 'cold';
+    if (p === 'brew') return /cold/i.test(n) ? 'cold' : 'hot';
+    return /iced|cold/i.test(n) ? 'cold' : '';
+  }
+  function tempTag(l) {
+    var t = tempOf(l);
+    return t === 'hot' ? '<span class="tmp hot">🔥 HOT · ساخن</span>' : t === 'cold' ? '<span class="tmp cold">🧊 COLD · بارد</span>' : '';
+  }
   function cardHTML(o) {
     var open = isOpen(o), st = o.payment ? 'paid' : o.status;
     var label = { 'new': 'New · جديد', preparing: 'Preparing · قيد التحضير', ready: 'Ready · جاهز', served: 'Served · تم', cancelled: 'Cancelled · ملغي', paid: 'Paid ' + (o.payment === 'cash' ? 'Cash · كاش' : 'Card · فيزا') }[st];
@@ -441,7 +456,7 @@ svg.chart .bar2{fill:#7fb2ff}
     var hasOff = false;
     o.items.forEach(function (l) {
       var isOff = !!offSet[l.id]; if (isOff && open) hasOff = true;
-      h += '<li' + (isOff && open ? ' class="offl"' : '') + '><span class="q">' + l.qty + '×</span><span class="nm">' + esc(l.en) + (l.ar ? '<span class="ar" lang="ar" dir="rtl">' + esc(l.ar) + '</span>' : '') + (open && l.id !== 'fee' ? '<button type="button" class="na" data-na="' + esc(l.id) + '" data-nid="' + o.id + '">🚫 غير متوفر</button>' : '') + '</span><span class="pr">' + f3(l.qty * l.price / 1000) + '</span></li>';
+      h += '<li' + (isOff && open ? ' class="offl"' : '') + '><span class="q">' + l.qty + '×</span><span class="nm">' + esc(l.en) + tempTag(l) + (l.ar ? '<span class="ar" lang="ar" dir="rtl">' + esc(l.ar) + '</span>' : '') + (open && l.id !== 'fee' ? '<button type="button" class="na" data-na="' + esc(l.id) + '" data-nid="' + o.id + '">🚫 غير متوفر</button>' : '') + '</span><span class="pr">' + f3(l.qty * l.price / 1000) + '</span></li>';
     });
     h += '</ul>';
     if (hasOff) h += '<div class="flag">⚠ فيه صنف غير متوفر · Contains a sold-out item — عدّل الطلب · Edit the order</div>';
@@ -973,7 +988,7 @@ svg.chart .bar2{fill:#7fb2ff}
     if (o.name) R.push({ k: 'c', t: o.name, z: 16 });
     if (o.type === 'pickup' && o.address) R.push({ k: 'c', t: 'سيارة · CAR: ' + latin(o.address), z: 20, b: 1 });
     R.push({ k: 'hr' });
-    o.items.forEach(function (l) { R.push({ k: 'l', t: l.qty + '× ' + l.en, z: 20, b: 1 }); if (l.ar) R.push({ k: 'r', t: l.ar, z: 16 }); });
+    o.items.forEach(function (l) { R.push({ k: 'l', t: l.qty + '× ' + l.en + (tempOf(l) ? '  [' + tempOf(l).toUpperCase() + ']' : ''), z: 20, b: 1 }); if (l.ar) R.push({ k: 'r', t: l.ar, z: 16 }); });
     if (o.note) R.push({ k: 'hr' }, { k: 'l', t: 'ملاحظة · Note: ' + o.note, z: 16 });
     R.push({ k: 'hr' }, { k: 'gap' });
     if (!canPrint()) { if (!silent) alert('Ticket printing needs RawBT mode · اختر RawBT'); return; }
@@ -1037,7 +1052,7 @@ svg.chart .bar2{fill:#7fb2ff}
   function drawEdit() {
     var h = '<h3>✏️ تعديل · Edit order #' + ed.id + '</h3><div class="acts"><button class="btn primary" id="edSave">Save · حفظ</button><button class="btn" id="edCancel">Close · إغلاق</button></div>';
     ed.lines.forEach(function (l, i) {
-      h += '<div class="el"><div>' + esc(l.en) + (l.ar ? '<span class="ar" lang="ar" dir="rtl">' + esc(l.ar) + '</span>' : '') + '</div>' +
+      h += '<div class="el"><div>' + esc(l.en) + tempTag(l) + (l.ar ? '<span class="ar" lang="ar" dir="rtl">' + esc(l.ar) + '</span>' : '') + '</div>' +
         '<div class="q"><button type="button" data-edq="' + i + '" data-d="-1">−</button><b>' + l.qty + '</b><button type="button" data-edq="' + i + '" data-d="1">+</button></div>' +
         '<button type="button" class="x" data-edx="' + i + '" aria-label="delete">🗑</button>' +
         '<button type="button" class="na" data-na="' + esc(l.id) + '" data-nid="' + ed.id + '">غير متوفر</button></div>';
