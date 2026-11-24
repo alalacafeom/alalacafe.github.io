@@ -251,7 +251,7 @@ svg.chart .bar2{fill:#7fb2ff}
 <input id="pTable" type="number" inputmode="numeric" min="1" max="99" placeholder="Table · طاولة" hidden>
 <input id="pName" type="text" placeholder="Name · الاسم" hidden>
 </div>
-<input id="pPhone" type="tel" inputmode="numeric" placeholder="Phone (loyalty) · الجوال (للولاء)">
+<input id="pPhone" type="tel" inputmode="numeric" maxlength="8" placeholder="Phone (loyalty) · الجوال (للولاء)">
 <div id="pLoy" class="cust" hidden></div>
 <textarea id="pAddr" rows="2" placeholder="Address · العنوان" hidden></textarea>
 <div id="pLines"></div>
@@ -473,7 +473,7 @@ svg.chart .bar2{fill:#7fb2ff}
       else if (lo.free > 0) h += '<div class="lbanner">🎁 الزبون عنده مشروب مجاني · Customer has a free drink</div>';
     }
     var canRedeem = open && o.phone && lo && lo.canFree && cheapestDrink(o) > 0;
-    if (canRedeem && o.wantFree) h += '<div class="lbanner gold">🙋 الزبون طلب استخدام مشروبه المجاني · Customer asked to use the free drink</div>';
+    if (canRedeem && o.wantFree) h += '<div class="lbanner gold">🎁 الزبون طبّق مشروبه المجاني (الخصم مضاف) · Customer applied the free drink (discount included)</div>';
     h += '<div class="tot"><span>' + (o.discount ? 'Discount −' + f3(o.discount) + ' · ' : '') + 'VAT ' + f3(o.vat) + ' · ' + (o.paidAt ? 'paid ' + timeOf(o.paidAt) : 'Total') + '</span><b>' + f3(o.total) + ' ' + CUR + '</b></div><div class="acts">';
     if (open) {
       var nx = (NEXT[o.type] || NEXT.dinein)[o.status];
@@ -569,6 +569,14 @@ svg.chart .bar2{fill:#7fb2ff}
     if (name === 'customers') loadCustomers();
     if (name === 'analytics') { var ap = q('[data-ap][aria-pressed="true"]')[0]; if (ap) setRange(ap.dataset.ap); loadAnalytics(); }
   }
+
+  // live analytics: while the tab is open the numbers refresh by themselves every 20 s (and the date rolls over at midnight)
+  setInterval(function () {
+    if (tab !== 'analytics' || document.hidden) return;
+    var ap = q('[data-ap][aria-pressed="true"]')[0]; if (ap) setRange(ap.dataset.ap);
+    loadAnalytics();
+  }, 20000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && tab === 'analytics') { var ap = q('[data-ap][aria-pressed="true"]')[0]; if (ap) setRange(ap.dataset.ap); loadAnalytics(); } });
 
   // ---- room bookings (tab "Rooms") ----
   var bk = { list: [], date: '', today: '', nowMin: 0, free: 120, rate: 1000, seen: null, ok: true }, bkTimer = 0;
@@ -772,7 +780,8 @@ svg.chart .bar2{fill:#7fb2ff}
   }
   var pLoyTimer = 0;
   $('pPhone').addEventListener('input', function () {
-    var ph = this.value.replace(/\D/g, '');
+    var cp = this.value.replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/\D/g, '').slice(0, 8); if (this.value !== cp) this.value = cp;
+    var ph = cp;
     clearTimeout(pLoyTimer); pos.loy = null; $('pLoy').hidden = true; posRenderCart();
     if (ph.length < 8) return;
     pLoyTimer = setTimeout(function () {
@@ -803,6 +812,7 @@ svg.chart .bar2{fill:#7fb2ff}
   function posSubmit(pay) {
     posErr('');
     if (!pos.cart.length) { posErr(ERR.empty); return; }
+    var phv = $('pPhone').value.replace(/\D/g, ''); if (phv && phv.length !== 8) { posErr('Phone must be 8 digits · الجوال ٨ أرقام'); return; }
     if (pay && !okPay((pay === 'cash' ? 'Cash · كاش' : 'Card · فيزا') + ' — ' + $('pTot').textContent + '\nConfirm payment? · تأكيد الدفع؟')) return;
     var expTotal = posTotals().total / 1000, expPct = pos.pct || 0;
     busy = true; ['pCash', 'pCard', 'pSend'].forEach(function (i) { $(i).disabled = true; });
@@ -1139,7 +1149,7 @@ svg.chart .bar2{fill:#7fb2ff}
     var list = custFiltered(), msg = $('cMsg').value;
     var h = '<thead><tr><th class="l">Customer · العميل</th><th>Orders</th><th>Spent</th><th>Stamps</th><th>Last visit</th><th></th></tr></thead><tbody>';
     list.slice(0, 500).forEach(function (c) {
-      h += '<tr><td class="l">' + esc(c.name || '—') + '<br><span style="color:var(--muted);font-size:12px">+' + esc(c.phone) + '</span></td><td>' + c.orders + '</td><td>' + f3(c.spent) + '</td><td>' + c.stamps + '/' + STAMPS + (c.free ? ' <span class="free">FREE×' + c.free + '</span>' : '') + '</td><td>' + (daysSince(c.lastVisit) === 0 ? 'today' : daysSince(c.lastVisit) + ' d') + '</td>' +
+      h += '<tr><td class="l">' + esc(c.name || '—') + '<br><span style="color:var(--muted);font-size:12px">+' + esc(c.phone) + '</span></td><td>' + c.orders + '</td><td>' + f3(c.spent) + '</td><td>' + c.stamps + '/' + STAMPS + (c.free ? ' <span class="free">FREE×' + c.free + '</span>' : '') + (c.freeUsed ? '<br><span style="color:var(--muted);font-size:12px">🎁 استخدم · used ' + c.freeUsed + '</span>' : '') + '</td><td>' + (daysSince(c.lastVisit) === 0 ? 'today' : daysSince(c.lastVisit) + ' d') + '</td>' +
         '<td><a class="btn sm" style="display:inline-flex;align-items:center;text-decoration:none;color:var(--ok)" target="_blank" rel="noopener" href="' + waLink(c.phone, msg.replace(/\{name\}/g, c.name || '')) + '">WhatsApp</a></td></tr>';
     });
     $('cTable').innerHTML = h + '</tbody>' + (list.length ? '' : '<tfoot><tr><td class="l" colspan="6">No customers yet · لا يوجد عملاء بعد</td></tr></tfoot>');
@@ -1209,7 +1219,7 @@ svg.chart .bar2{fill:#7fb2ff}
       lastA = d; var t = d.totals, p = d.prev;
       var avg = t.orders ? t.total / t.orders : 0, pavg = p.orders ? p.total / p.orders : 0;
       var tile = function (k, v, dl) { return '<div class="tile"><div class="k">' + k + '</div><div class="v">' + v + '</div>' + (dl || '') + '</div>'; };
-      var nw = new Date(), h = '<div style="color:var(--muted);font-size:12px;margin-bottom:6px">Updated · آخر تحديث ' + ('0' + nw.getHours()).slice(-2) + ':' + ('0' + nw.getMinutes()).slice(-2) + '</div><div class="tiles">' + tile('Sales · المبيعات', f3(t.total), delta(t.total, p.total)) + tile('Orders · الطلبات', t.orders, delta(t.orders, p.orders)) +
+      var nw = new Date(), h = '<div style="color:var(--muted);font-size:12px;margin-bottom:6px">🟢 Live · مباشر — آخر تحديث ' + ('0' + nw.getHours()).slice(-2) + ':' + ('0' + nw.getMinutes()).slice(-2) + '</div><div class="tiles">' + tile('Sales · المبيعات', f3(t.total), delta(t.total, p.total)) + tile('Orders · الطلبات', t.orders, delta(t.orders, p.orders)) +
         tile('Avg. order · متوسط الطلب', f3(avg), delta(avg, pavg)) + tile('VAT 5% · الضريبة', f3(t.vat)) + tile('Subtotal · قبل الضريبة', f3(t.subtotal)) +
         tile('Discounts · خصومات', f3(t.discount)) + tile('Cash · كاش', f3(t.cash)) + tile('Card · فيزا', f3(t.card)) + '</div>';
       h += '<div class="two"><div class="panelbox"><h3 class="sec" style="margin-top:0">Sales by day · المبيعات يومياً</h3>' + vbars(d.days.map(function (x) { return { l: x.date, v: x.total }; }), function (l) { return l.slice(5); }) + '</div>' +
@@ -1239,7 +1249,7 @@ svg.chart .bar2{fill:#7fb2ff}
   setRange('today');
 
   // ---- one-tap update: clears caches and reloads the newest page; also detects when a newer version is published ----
-  var BUILD = '1795517892';
+  var BUILD = '1795551018';
   function doUpdate() {
     try { if (window.caches && caches.keys) caches.keys().then(function (k) { k.forEach(function (x) { caches.delete(x); }); }); } catch (e) {}
     try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) navigator.serviceWorker.getRegistrations().then(function (r) { r.forEach(function (x) { x.unregister(); }); }).catch(function () {}); } catch (e) {}

@@ -92,7 +92,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
     start: ['Please pick a start time.', 'اختر وقت البداية.'],
     room: ['Please pick a room.', 'اختر القاعة.'],
     name: ['Please enter your name.', 'اكتب اسمك.'],
-    phone: ['Please enter a valid phone number.', 'اكتب رقم جوال صحيح.'],
+    phone: ['Phone number must be exactly 8 digits (no country code).', 'رقم الجوال لازم يكون ٨ أرقام بالضبط (بدون مفتاح الدولة).'],
     notfound: ['Booking not found. Check the number and phone.', 'لم نجد الحجز. تأكد من الرقم والجوال.'],
     locked: ['This booking can no longer be changed. Please call us.', 'لا يمكن تعديل هذا الحجز الآن، تواصل معنا.'],
     net: ['Connection problem. Please try again.', 'مشكلة في الاتصال، حاول مرة أخرى.']
@@ -152,7 +152,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
     }
     h += lbl('Your details', 'بياناتك');
     h += '<div class="field" id="fgName"><input id="fName" autocomplete="name" placeholder="Name · الاسم" value="' + esc(S.name) + '" maxlength="60"></div>';
-    h += '<div class="field" id="fgPhone"><input id="fPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone · رقم الجوال" value="' + esc(S.phone) + '" maxlength="20"></div>';
+    h += '<div class="field" id="fgPhone"><input id="fPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="9XXXXXXX · رقم الجوال" value="' + esc(S.phone) + '" maxlength="8"></div>';
     h += '<div class="field"><textarea id="fNote" maxlength="200" placeholder="Note (optional) · ملاحظة (اختياري)">' + esc(S.note) + '</textarea></div>';
     h += '<p class="note">You can write the note in Arabic or English; our team will read it in English.<span class="ar" lang="ar" dir="rtl" style="display:block">تقدر تكتب الملاحظة بالعربي أو الإنجليزي، وفريقنا يقرأها بالإنجليزي.</span></p>';
     if (S.room && S.start >= 0) {
@@ -187,16 +187,21 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
   function renderFind() {
     var h = '<h1><span>Change or cancel booking</span><span class="ar" lang="ar" dir="rtl">تعديل أو إلغاء الحجز</span></h1><p class="sub">Enter the booking number you saved and your phone number.<span class="ar" lang="ar" dir="rtl">اكتب رقم الحجز الذي حفظته ورقم جوالك.</span></p>';
     h += '<div class="field" style="margin-top:14px"><input id="fId" inputmode="numeric" placeholder="Booking no. · رقم الحجز" value="' + esc(S.findId || '') + '"></div>';
-    h += '<div class="field"><input id="fPh" type="tel" inputmode="tel" placeholder="Phone · رقم الجوال" value="' + esc(S.phone) + '"></div>';
+    h += '<div class="field"><input id="fPh" type="tel" inputmode="numeric" maxlength="8" placeholder="9XXXXXXX · رقم الجوال" value="' + esc(S.phone) + '"></div>';
     if (S.err) h += '<p class="err">' + errText(S.err) + '</p>';
     h += '<button type="button" class="btn primary" id="findGo">Find · بحث</button><button type="button" class="link" id="back2">Back · رجوع</button>';
     app.innerHTML = h;
   }
 
+  function cleanPhone(v) {
+    v = String(v || '').replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/\D/g, '');
+    if (v.length > 8 && v.indexOf('968') === 0) v = v.slice(3);
+    return v.slice(0, 8);
+  }
   function setErr(c) { S.err = c; render(); var e = app.querySelector('.err'); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'center' }); }
   function readFields() {
     var n = document.getElementById('fName'), p = document.getElementById('fPhone'), t = document.getElementById('fNote');
-    if (n) S.name = n.value; if (p) S.phone = p.value; if (t) S.note = t.value;
+    if (n) S.name = n.value; if (p) S.phone = cleanPhone(p.value); if (t) S.note = t.value;
   }
   function refreshAvail() { S.loaded = false; return loadAvail().then(function () { if (S.start >= 0 && !slotOk(S.start)) S.start = -1; render(); }).catch(function () { setErr('net'); }); }
   function submit() {
@@ -205,7 +210,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
     if (!S.room) return setErr('room');
     if (S.start < 0) return setErr('start');
     if (!S.name.trim()) { setErr('name'); var a = document.getElementById('fgName'); if (a) a.className += ' bad'; return; }
-    if (S.phone.replace(/\D/g, '').length < 8) { setErr('phone'); var b2 = document.getElementById('fgPhone'); if (b2) b2.className += ' bad'; return; }
+    if (cleanPhone(S.phone).length !== 8) { setErr('phone'); var b2 = document.getElementById('fgPhone'); if (b2) b2.className += ' bad'; return; }
     S.sending = true; render();
     var body = { action: S.edit ? 'bookmod' : 'book', name: S.name.trim(), phone: S.phone, date: S.date, start: S.start, mins: S.mins, room: S.room, note: S.note.trim() };
     if (S.edit) body.id = S.edit.id;
@@ -243,7 +248,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
     else if (t.id === 'findB') { S.view = 'find'; S.err = ''; render(); }
     else if (t.id === 'back2') { S.view = 'form'; S.err = ''; render(); }
     else if (t.id === 'findGo') {
-      var id = (document.getElementById('fId').value || '').replace(/\D/g, ''), ph = document.getElementById('fPh').value; S.findId = id; S.phone = ph;
+      var id = (document.getElementById('fId').value || '').replace(/\D/g, ''), ph = cleanPhone(document.getElementById('fPh').value); S.findId = id; S.phone = ph;
       loadBooking(id, ph).then(function (ok) { if (!ok) render(); });
     }
     else if (t.id === 'chg') { loadBooking(S.done.id, S.phone).then(function (ok) { if (!ok) { S.view = 'find'; S.findId = S.done.id; render(); } }); }
@@ -261,7 +266,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
   app.addEventListener('change', function (e) {
     if (e.target.id === 'fDate') { readFields(); S.date = e.target.value || S.today; S.start = -1; S.loaded = false; render(); refreshAvail(); }
   });
-  app.addEventListener('input', function (e) { if (e.target.id === 'fName') S.name = e.target.value; });
+  app.addEventListener('input', function (e) { if (e.target.id === 'fName') S.name = e.target.value; if (e.target.id === 'fPhone' || e.target.id === 'fPh') { var cp = cleanPhone(e.target.value); if (e.target.value !== cp) e.target.value = cp; } });
 
   if (!API) { app.innerHTML = '<p class="empty">Booking is not available right now. · الحجز غير متاح حاليًا.</p>'; return; }
   S.date = ymd(new Date()); S.today = S.date; S.nowMin = 0;
