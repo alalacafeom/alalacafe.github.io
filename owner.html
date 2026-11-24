@@ -52,6 +52,18 @@ h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold
 input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1px solid var(--line2);border-radius:10px;font-size:18px}
 .diff{margin-top:8px;font-size:15px;font-weight:600}
 .empty{color:var(--muted);padding:10px 0;text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:transparent}.chip[aria-pressed=true]{background:var(--gold);color:var(--on-gold);border-color:var(--gold);font-weight:600}
+.dates{display:flex;gap:8px;margin-top:10px}.dates input{flex:1;min-width:0;min-height:42px;padding:0 8px;background:var(--bg);border:1px solid var(--line2);border-radius:10px;color-scheme:dark}
+.two{display:flex;gap:8px;margin-top:10px}.two button{flex:1;min-height:46px;border-radius:12px;border:1px solid var(--gold);background:var(--gold);color:var(--on-gold);font-weight:600}.two button.alt{background:transparent;color:var(--gold)}
+#rep{display:none}
+@media print{
+  body{background:#fff;color:#000}header,#login,#app{display:none!important}
+  #rep{display:block!important;padding:0;color:#000;font-size:12px}
+  #rep h1{font-size:20px;margin:0 0 2px}#rep .sub{color:#555;margin-bottom:12px}
+  #rep table{width:100%;border-collapse:collapse;margin:6px 0 14px}#rep th,#rep td{border-bottom:1px solid #ccc;padding:5px 6px;text-align:start}#rep th{background:#eee}
+  #rep .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 14px}#rep .kp div{border:1px solid #bbb;padding:8px;border-radius:6px}#rep .kp b{display:block;font-size:16px}
+  #rep h3{font-size:13px;margin:12px 0 4px;border-bottom:2px solid #000}
+}
 </style>
 </head>
 <body>
@@ -68,6 +80,7 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
 <div class="live"><div><span class="dot" id="dot"></span><span id="upd">…</span></div><button class="rb" id="rf" type="button">↻ Refresh · تحديث</button></div></div></header>
 <div class="wrap" id="out"></div>
 </div>
+<div id="rep"></div>
 
 <script src="config.js"></script>
 <script>
@@ -114,17 +127,73 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
       return '<div class="row"><div class="t">' + tg + ' #' + a.id + (a.reason ? ' · ' + esc(a.reason) : '') + '<small>' + ago(a.at) + (a.phone ? ' · +' + esc(a.phone) : '') + '</small></div><b>' + f3(a.total) + '</b></div>'; }).join('') : '<div class="empty">All clear ✓ · لا شيء</div>') + '</div>';
     h += '<h2>Latest paid · آخر المدفوعات</h2><div class="box">' + (d.recent.length ? d.recent.map(function (o) {
       return '<div class="row"><div class="t">#' + o.id + ' · ' + (TYPE[o.type] || o.type) + (o.table ? ' ' + esc(o.table) : '') + '<small>' + tm(o.paidAt) + ' · ' + o.items + ' items · ' + (o.payment === 'card' ? '💳' : '💵') + (o.discount ? ' · −' + f3(o.discount) : '') + '</small></div><b>' + f3(o.total) + '</b></div>'; }).join('') : '<div class="empty">—</div>') + '</div>';
+    h += '<h2>Reports · التقارير</h2><div class="box"><div class="chips" id="rch">' +
+      '<button class="chip" type="button" data-r="today" aria-pressed="true">Today · اليوم</button><button class="chip" type="button" data-r="yest" aria-pressed="false">Yesterday · أمس</button>' +
+      '<button class="chip" type="button" data-r="7" aria-pressed="false">7 days · ٧ أيام</button><button class="chip" type="button" data-r="month" aria-pressed="false">This month · الشهر</button>' +
+      '<button class="chip" type="button" data-r="lmonth" aria-pressed="false">Last month · الماضي</button></div>' +
+      '<div class="dates"><input type="date" id="rf1"><input type="date" id="rf2"></div>' +
+      '<div class="two"><button type="button" id="rpdf">📄 PDF</button><button type="button" id="rcsv" class="alt">📊 Excel / CSV</button></div>' +
+      '<div class="empty" id="rmsg" style="padding:6px 0 0;font-size:12px"></div></div>';
     $('out').innerHTML = h;
+    initReports();
     var mc = $('mc'); if (mc) { mc.addEventListener('input', function () {
       var v = parseFloat(String(mc.value).replace(',', '.')); if (isNaN(v)) { $('mcd').textContent = ''; return; }
       var df = v - d.day.card; $('mcd').innerHTML = df === 0 ? '<span class="up">✓ Match · مطابق</span>' : '<span class="' + (Math.abs(df) < 0.001 ? 'up' : 'down') + '">System card: ' + f3(d.day.card) + ' · Diff: ' + (df > 0 ? '+' : '') + f3(df) + '</span>'; }); }
   }
+  function iso(d) { var z = d.getTimezoneOffset() * 60000; return new Date(d - z).toISOString().slice(0, 10); }
+  function setR(k) {
+    var n = new Date(), f = new Date(n), t = new Date(n);
+    if (k === 'yest') { f.setDate(n.getDate() - 1); t = new Date(f); }
+    else if (k === '7') f.setDate(n.getDate() - 6);
+    else if (k === 'month') f = new Date(n.getFullYear(), n.getMonth(), 1);
+    else if (k === 'lmonth') { f = new Date(n.getFullYear(), n.getMonth() - 1, 1); t = new Date(n.getFullYear(), n.getMonth(), 0); }
+    $('rf1').value = iso(f); $('rf2').value = iso(t);
+    var cs = document.querySelectorAll('#rch .chip'); for (var i = 0; i < cs.length; i++) cs[i].setAttribute('aria-pressed', cs[i].getAttribute('data-r') === k ? 'true' : 'false');
+  }
+  function fetchReport(cb) {
+    var a = $('rf1').value, b = $('rf2').value || a; if (!a) return;
+    $('rmsg').textContent = '… ⏳';
+    fetch(API + '?action=ownerreport&pin=' + encodeURIComponent(pin) + '&from=' + a + '&to=' + b).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) { $('rmsg').textContent = 'Error · خطأ'; return; } $('rmsg').textContent = ''; cb(d);
+    }).catch(function () { $('rmsg').textContent = 'No connection · لا يوجد اتصال'; });
+  }
+  function repHTML(d) {
+    var t = d.totals, p = d.prev, c = d.customers, avg = t.orders ? t.total / t.orders : 0;
+    var kp = function (k, v) { return '<div>' + k + '<b>' + v + '</b></div>'; };
+    var x = '<h1>alala cafe — Sales report · تقرير المبيعات</h1><div class="sub">' + esc(d.from) + (d.to !== d.from ? ' → ' + esc(d.to) : '') + ' · ' + new Date().toLocaleString() + '</div>' +
+      '<div class="kp">' + kp('Sales · المبيعات', f3(t.total)) + kp('Orders · الطلبات', t.orders) + kp('Avg. order · المتوسط', f3(avg)) + kp('Previous period · الفترة السابقة', f3(p.total)) +
+      kp('Cash · كاش', f3(t.cash)) + kp('Card · فيزا', f3(t.card)) + kp('VAT · الضريبة', f3(t.vat)) + kp('Discounts · خصومات', f3(t.discount)) + '</div>';
+    x += '<h3>Daily · يومي</h3><table><tr><th>Date</th><th>Orders</th><th>Subtotal</th><th>Disc.</th><th>VAT</th><th>Total</th><th>Cash</th><th>Card</th></tr>' +
+      d.days.map(function (r) { return '<tr><td>' + r.date + '</td><td>' + r.orders + '</td><td>' + f3(r.subtotal) + '</td><td>' + f3(r.discount) + '</td><td>' + f3(r.vat) + '</td><td>' + f3(r.total) + '</td><td>' + f3(r.cash) + '</td><td>' + f3(r.card) + '</td></tr>'; }).join('') + '</table>';
+    x += '<h3>Top items · الأكثر مبيعاً</h3><table><tr><th>Item</th><th>Qty</th><th>Sales</th></tr>' +
+      d.items.slice(0, 20).map(function (r) { return '<tr><td>' + esc(r.en) + (r.ar ? ' · ' + esc(r.ar) : '') + '</td><td>' + r.qty + '</td><td>' + f3(r.sales) + '</td></tr>'; }).join('') + '</table>';
+    x += '<h3>Order types · أنواع الطلبات</h3><table><tr><th>Type</th><th>Orders</th><th>Total</th></tr>' +
+      d.types.map(function (r) { return '<tr><td>' + (TYPE[r.type] || r.type) + '</td><td>' + r.orders + '</td><td>' + f3(r.total) + '</td></tr>'; }).join('') + '</table>';
+    x += '<h3>Customers · العملاء</h3><p>New ' + c.fresh + ' · Returning ' + c.returning + ' · With phone ' + c.withPhone + ' · Anonymous ' + c.anonymous + '</p>';
+    return x;
+  }
+  function csvDown(d) {
+    var rows = [['Date', 'Orders', 'Subtotal', 'Discount', 'VAT', 'Total', 'Cash', 'Card']];
+    d.days.forEach(function (r) { rows.push([r.date, r.orders, f3(r.subtotal), f3(r.discount), f3(r.vat), f3(r.total), f3(r.cash), f3(r.card)]); });
+    rows.push([]); rows.push(['Item', 'Qty', 'Sales']);
+    d.items.forEach(function (r) { rows.push([r.en, r.qty, f3(r.sales)]); });
+    var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'alala-report-' + d.from + '_' + d.to + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { document.body.removeChild(a); }, 500);
+  }
+  function initReports() {
+    setR('today');
+    $('rch').addEventListener('click', function (e) { var b = e.target.closest ? e.target.closest('[data-r]') : null; if (b) setR(b.getAttribute('data-r')); });
+    $('rpdf').addEventListener('click', function () { fetchReport(function (d) { $('rep').innerHTML = repHTML(d); setTimeout(function () { window.print(); }, 150); }); });
+    $('rcsv').addEventListener('click', function () { fetchReport(csvDown); });
+  }
   function load() {
     return fetch(API + '?action=owner&pin=' + encodeURIComponent(pin)).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.ok) { if (!ok) { $('err').textContent = 'Wrong PIN · الرمز غير صحيح'; $('err').hidden = false; } else { $('dot').className = 'dot off'; } return false; }
-      var keep = $('mc') ? $('mc').value : '';
+      var keep = $('mc') ? $('mc').value : '', k1 = $('rf1') ? $('rf1').value : '', k2 = $('rf2') ? $('rf2').value : '';
       ok = true; last = d; $('login').hidden = true; $('app').hidden = false; render(d);
       if (keep && $('mc')) { $('mc').value = keep; $('mc').dispatchEvent(new Event('input')); }
+      if (k1 && $('rf1')) { $('rf1').value = k1; $('rf2').value = k2; var cs = document.querySelectorAll('#rch .chip'); for (var i = 0; i < cs.length; i++) cs[i].setAttribute('aria-pressed', 'false'); }
       var n = new Date(); $('dot').className = 'dot'; $('upd').textContent = 'Live · مباشر — ' + tm(n.toISOString());
       return true;
     }).catch(function () { $('dot').className = 'dot off'; if (!ok) { $('err').textContent = 'No connection · لا يوجد اتصال'; $('err').hidden = false; } });
