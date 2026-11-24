@@ -76,6 +76,9 @@ textarea{padding:10px 12px;min-height:60px;width:100%}
 .ltoast{position:fixed;left:12px;right:12px;top:12px;z-index:90;max-width:560px;margin:0 auto;padding:16px;border-radius:16px;background:var(--gold);color:var(--on-gold);font-weight:700;font-size:17px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.6)}
 .redeem{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px dashed var(--gold);border-radius:10px;font-size:13px;color:var(--gold)}
 .redeem input{width:20px;height:20px;min-height:0;accent-color:#D9B861}
+.redeem.applyb{flex:1 1 100%;justify-content:center;padding:12px;border:2px solid var(--gold);border-radius:12px;font-size:15px;font-weight:700;background:rgba(217,184,97,.08);text-align:center}
+.redeem.applyb input{width:26px;height:26px}
+.redeem.applyb:has(input:checked){background:var(--gold);color:var(--on-gold)}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .acts .btn{flex:1 1 auto;min-width:96px}
 .empty{padding:60px 0;text-align:center;color:var(--muted)}
@@ -90,7 +93,7 @@ textarea{padding:10px 12px;min-height:60px;width:100%}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 th,td{padding:8px 10px;text-align:end;border-bottom:1px solid var(--line);font-size:14px}
 th:first-child,td:first-child,td.l,th.l{text-align:start}
-th{color:var(--muted);font-weight:500;font-size:12px;position:sticky;top:60px;background:var(--bg)}
+th{color:var(--muted);font-weight:500;font-size:12px;background:var(--bg)}
 h3.sec{margin:24px 0 8px;font-size:15px;color:var(--gold)}
 .tw{overflow-x:auto}
 .panelbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
@@ -331,7 +334,7 @@ svg.chart .bar2{fill:#7fb2ff}
   var API = CFG.API_URL || '';
   var MENU = window.ALALA_MENU || [];
   var CUR = 'OMR';
-  var STAMPS = 10;
+  var STAMPS = 7;
   var pin = '';
   function normPin(v) { return String(v || '').replace(/[\u0660-\u0669]/g, function (c) { return c.charCodeAt(0) - 0x660; }).replace(/[\u06F0-\u06F9]/g, function (c) { return c.charCodeAt(0) - 0x6F0; }).replace(/\s+/g, ''); }
   var cfg = { nameEn: 'alala cafe', nameAr: 'ألالا كافيه', taxNo: '', vatRate: 0.05, fee: 0, min: 0, paused: false };
@@ -466,14 +469,16 @@ svg.chart .bar2{fill:#7fb2ff}
     if (o.phone && lo) {
       h += '<div class="cust">' + dotsHTML(lo.stamps) + ' <span>' + lo.stamps + '/' + STAMPS + '</span>' + (lo.free <= 0 ? '<span>· باقي ' + (STAMPS - lo.stamps) + ' · ' + (STAMPS - lo.stamps) + ' to free</span>' : '') + '</div>';
       if (lo.free > 0 && open) h += '<div class="lbanner gold">🎁 مشروب مجاني مستحق' + (lo.free > 1 ? ' × ' + lo.free : '') + ' · FREE DRINK EARNED' + (lo.free > 1 ? ' × ' + lo.free : '') + '</div>';
+      else if (lo.sameOrder && open) h += '<div class="lbanner gold">🎁 هذا الطلب يكمّل الأختام: أرخص مشروب مجاني · This order completes the stamps: cheapest drink is free</div>';
       else if (lo.free > 0) h += '<div class="lbanner">🎁 الزبون عنده مشروب مجاني · Customer has a free drink</div>';
     }
-    var canRedeem = open && o.phone && lo && lo.balance >= STAMPS && cheapestDrink(o) > 0;
-    if (canRedeem) h += '<label class="redeem"><input type="checkbox" data-redeem="' + o.id + '"> 🎁 طبّق المشروب المجاني · Apply free drink: −' + f3(cheapestDrink(o)) + '</label>';
+    var canRedeem = open && o.phone && lo && lo.canFree && cheapestDrink(o) > 0;
+    if (canRedeem && o.wantFree) h += '<div class="lbanner gold">🙋 الزبون طلب استخدام مشروبه المجاني · Customer asked to use the free drink</div>';
     h += '<div class="tot"><span>' + (o.discount ? 'Discount −' + f3(o.discount) + ' · ' : '') + 'VAT ' + f3(o.vat) + ' · ' + (o.paidAt ? 'paid ' + timeOf(o.paidAt) : 'Total') + '</span><b>' + f3(o.total) + ' ' + CUR + '</b></div><div class="acts">';
     if (open) {
       var nx = (NEXT[o.type] || NEXT.dinein)[o.status];
       if (nx) h += '<button class="btn ' + nx[2] + '" data-act="status" data-st="' + nx[0] + '" data-id="' + o.id + '">' + nx[1] + '</button>';
+      if (canRedeem) h += '<label class="redeem applyb"><input type="checkbox" data-redeem="' + o.id + '"' + (o.wantFree ? ' data-want="1"' : '') + '> <span>🎁 Apply free drink · طبّق المجاني<br><b>−' + f3(cheapestDrink(o)) + '</b></span></label>';
       h += '<button class="btn" data-act="edit" data-id="' + o.id + '">✏️ Edit · تعديل</button>' +
         '<button class="btn" data-act="ticket" data-id="' + o.id + '">🧾 Ticket · طلب</button>' +
         '<button class="btn ok" data-act="pay" data-m="cash" data-id="' + o.id + '">💵 Cash · كاش</button>' +
@@ -491,7 +496,7 @@ svg.chart .bar2{fill:#7fb2ff}
     var keep = {}; q('[data-redeem]').forEach(function (c) { keep[c.getAttribute('data-redeem')] = c.checked; });
     $('gActive').innerHTML = act.length ? act.map(cardHTML).join('') : '<div class="empty">No open orders · لا توجد طلبات</div>';
     $('gPaid').innerHTML = paid.length ? paid.map(cardHTML).join('') : '<div class="empty">Nothing paid yet today · لا توجد مدفوعات اليوم</div>';
-    q('[data-redeem]').forEach(function (c) { c.checked = !!keep[c.getAttribute('data-redeem')]; });
+    q('[data-redeem]').forEach(function (c) { var k = keep[c.getAttribute('data-redeem')]; c.checked = k === undefined ? c.hasAttribute('data-want') : !!k; });
     renderOffBar();
     var n = act.filter(function (o) { return o.status === 'new'; }).length;
     $('nActive').textContent = n; $('nActive').hidden = !n;
@@ -562,7 +567,7 @@ svg.chart .bar2{fill:#7fb2ff}
     Object.keys(VIEWS).forEach(function (k) { $(VIEWS[k]).hidden = k !== name; });
     if (name === 'rooms') { renderBookings(); loadBookings(); }
     if (name === 'customers') loadCustomers();
-    if (name === 'analytics' && !$('rOut').innerHTML) loadAnalytics();
+    if (name === 'analytics') { var ap = q('[data-ap][aria-pressed="true"]')[0]; if (ap) setRange(ap.dataset.ap); loadAnalytics(); }
   }
 
   // ---- room bookings (tab "Rooms") ----
@@ -755,7 +760,7 @@ svg.chart .bar2{fill:#7fb2ff}
     var t = posTotals();
     $('pDiscLn').hidden = !t.pd; $('pDiscTx').textContent = 'Discount ' + pos.pct + '% · خصم'; $('pDiscAmt').textContent = '−' + f3(t.pd / 1000);
     $('pSub').textContent = f3((t.sum - t.disc) / 1000); $('pVat').textContent = f3(t.vat / 1000); $('pTot').textContent = f3(t.total / 1000) + ' ' + CUR;
-    var show = pos.loy && pos.loy.balance >= STAMPS && t.cheapest > 0;
+    var show = pos.loy && t.drinks > 0 && pos.loy.balance + (t.drinks - 1) >= STAMPS && t.cheapest > 0;
     $('pRedeemBox').hidden = !show;
     if (show) $('pRedeemTx').textContent = 'Free drink: −' + f3(t.cheapest / 1000) + ' · مشروب مجاني';
   }
@@ -1198,13 +1203,13 @@ svg.chart .bar2{fill:#7fb2ff}
   function loadAnalytics() {
     var from = $('rFrom').value || iso(new Date()), to = $('rTo').value || from;
     $('rFrom').value = from; $('rTo').value = to;
-    $('rOut').innerHTML = '<div class="empty">…</div>';
+    if (!$('rOut').innerHTML) $('rOut').innerHTML = '<div class="empty">…</div>';
     get({ action: 'analytics', pin: pin, from: from, to: to }).then(function (d) {
       if (!d || !d.ok) { $('rOut').innerHTML = '<div class="empty">Error</div>'; return; }
       lastA = d; var t = d.totals, p = d.prev;
       var avg = t.orders ? t.total / t.orders : 0, pavg = p.orders ? p.total / p.orders : 0;
       var tile = function (k, v, dl) { return '<div class="tile"><div class="k">' + k + '</div><div class="v">' + v + '</div>' + (dl || '') + '</div>'; };
-      var h = '<div class="tiles">' + tile('Sales · المبيعات', f3(t.total), delta(t.total, p.total)) + tile('Orders · الطلبات', t.orders, delta(t.orders, p.orders)) +
+      var nw = new Date(), h = '<div style="color:var(--muted);font-size:12px;margin-bottom:6px">Updated · آخر تحديث ' + ('0' + nw.getHours()).slice(-2) + ':' + ('0' + nw.getMinutes()).slice(-2) + '</div><div class="tiles">' + tile('Sales · المبيعات', f3(t.total), delta(t.total, p.total)) + tile('Orders · الطلبات', t.orders, delta(t.orders, p.orders)) +
         tile('Avg. order · متوسط الطلب', f3(avg), delta(avg, pavg)) + tile('VAT 5% · الضريبة', f3(t.vat)) + tile('Subtotal · قبل الضريبة', f3(t.subtotal)) +
         tile('Discounts · خصومات', f3(t.discount)) + tile('Cash · كاش', f3(t.cash)) + tile('Card · فيزا', f3(t.card)) + '</div>';
       h += '<div class="two"><div class="panelbox"><h3 class="sec" style="margin-top:0">Sales by day · المبيعات يومياً</h3>' + vbars(d.days.map(function (x) { return { l: x.date, v: x.total }; }), function (l) { return l.slice(5); }) + '</div>' +

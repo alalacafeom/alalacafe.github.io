@@ -141,6 +141,10 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 .loy .dots{display:flex;gap:4px;flex-wrap:wrap}
 .loy .dot{width:12px;height:12px;border-radius:50%;border:1px solid var(--gold)}
 .loy .dot.on{background:var(--gold)}
+.wantfree{display:flex;align-items:center;gap:10px;margin-top:8px;padding:12px;border:2px solid var(--gold);border-radius:12px;color:var(--gold);font-size:14px;font-weight:700}
+.wantfree input{width:24px;height:24px;min-height:0;accent-color:#D9B861;flex:none}
+.wantfree[hidden]{display:none}
+.wantfree>span{display:flex;flex-direction:column;gap:2px}
 .loy.big{flex-direction:column;align-items:center;gap:8px;margin:14px 0;padding:14px;border:1px solid var(--line2);border-radius:14px}
 .loy.big .dot{width:18px;height:18px}
 .loy .lmsg{flex-basis:100%;display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.35;color:var(--fg)}
@@ -222,6 +226,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 <label for="phone"><span>Phone for loyalty stamps (optional)</span><span class="ar" lang="ar" dir="rtl">جوالك لأختام الولاء (اختياري)</span></label>
 <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="15" placeholder="9XXXXXXX">
 <p class="loy" id="loy" hidden></p>
+<label class="wantfree" id="wantFreeBox" hidden><input type="checkbox" id="wantFree"><span><span>🎁 Use my free drink (cheapest drink) <b id="wfAmt"></b></span><span class="ar" lang="ar" dir="rtl">استخدم مشروبي المجاني (أرخص مشروب) — يؤكده الكاشير عند الدفع</span></span></label>
 </div>
 <div class="field" id="addrField" hidden>
 <label for="custAddr"><span>Delivery address</span><span class="ar" lang="ar" dir="rtl">عنوان التوصيل</span></label>
@@ -274,7 +279,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
   var ALLOW = CFG.ORDER_TYPES || ['dinein'];   // config.js: add 'pickup', 'delivery' to enable them
   var TRACK = !!CFG.TRACKING;                  // config.js: TRACKING: true shows live order tracking
   var DRINK_SECTIONS = ['special', 'hot', 'cold', 'brew', 'blends'];
-  var STAMPS = 10;
+  var STAMPS = 7;
   var orderType = 'dinein', carMode = false;
   var INFO = { delivery: true, pickup: true, fee: 0, min: 0, paused: false };
   var lastOrder = null, trackTimer = 0;
@@ -568,7 +573,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
       items.push({ id: l.id, qty: l.qty, price: it.price, drink: DRINK_SECTIONS.indexOf(it.sec.id) >= 0 || it.id === 'others-1',
         en: it.en + (op ? ' – ' + op.en : ''), ar: it.ar ? it.ar + (op ? ' – ' + op.ar : '') : '' });
     });
-    return { action: 'order', type: API_URL ? orderType : 'dinein', table: tableValue(), name: nameValue() || (carMode ? 'Car ' + plateValue() : ''), address: addrValue(), phone: phoneValue(), note: $('orderNote').value.trim(), items: items };
+    return { action: 'order', type: API_URL ? orderType : 'dinein', table: tableValue(), name: nameValue() || (carMode ? 'Car ' + plateValue() : ''), address: addrValue(), phone: phoneValue(), note: $('orderNote').value.trim(), wantFree: !$('wantFreeBox').hidden && $('wantFree').checked, items: items };
   }
   function cartDrinks() {
     var n = 0;
@@ -588,6 +593,9 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
       var d = big ? 0 : cartDrinks();
       if (d > 0) {
         var after = n + d;
+        if (!(l.free > 0) && n < STAMPS && after - 1 >= STAMPS) {
+          h += '<span class="lwin"><span>🎁 This order completes your stamps: the cheapest drink is FREE (confirmed at payment)</span><span class="ar" lang="ar" dir="rtl">هذا الطلب يكمّل أختامك: أرخص مشروب مجاني (يتأكد عند الدفع)</span></span>';
+        } else
         h += after >= STAMPS
           ? '<span class="lwin"><span>🎉 This order unlocks your FREE drink for next time</span><span class="ar" lang="ar" dir="rtl">هذا الطلب يفتح لك مشروباً مجانياً للزيارة القادمة</span></span>'
           : '<span class="lmsg"><span>This order adds +' + d + ' → ' + after + '/' + STAMPS + ' after payment</span><span class="ar" lang="ar" dir="rtl">هذا الطلب يضيف ' + d + ' بعد الدفع ← ' + after + '/' + STAMPS + '</span></span>';
@@ -596,6 +604,13 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     return h;
   }
   var lastLoy = null;
+  function updateWant() {
+    var d = cartDrinks(), ok = !!(lastLoy && lastLoy.ok && phoneValue() && d > 0 && (lastLoy.balance || 0) + (d - 1) >= STAMPS), cheap = 0;
+    if (ok) cart.forEach(function (l) { var it = byId[l.id]; if (it && (DRINK_SECTIONS.indexOf(it.sec.id) >= 0 || it.id === 'others-1') && (!cheap || it.price < cheap)) cheap = it.price; });
+    $('wantFreeBox').hidden = !ok;
+    if (!ok) $('wantFree').checked = false;
+    $('wfAmt').textContent = ok && cheap ? '(−' + (cheap / 1000).toFixed(3) + ')' : '';
+  }
   var loyTimer = 0;
   function lookupLoyalty() {
     var box = $('loy'), ph = phoneValue();
@@ -603,7 +618,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
     if (!API_URL || ph.length < 8) { box.hidden = true; return; }
     loyTimer = setTimeout(function () {
       fetch(API_URL + '?action=loyalty&phone=' + encodeURIComponent(ph)).then(function (r) { return r.json(); }).then(function (d) {
-        if (d && d.ok && phoneValue() === ph) { lastLoy = d; box.innerHTML = loyHTML(d); box.hidden = false; }
+        if (d && d.ok && phoneValue() === ph) { lastLoy = d; box.innerHTML = loyHTML(d); box.hidden = false; updateWant(); }
       }).catch(function () {});
     }, 400);
   }
@@ -719,6 +734,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
 
   // ---- order sheet ----
   function renderSheet() {
+    try { updateWant(); } catch (e) {}
     var t = totals();
     var done = !$('doneBody').hidden;
     $('cartBody').hidden = done || t.n === 0;
@@ -895,7 +911,7 @@ h2 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-weight:600
   });
   $('orderNote').addEventListener('input', updateActions);
   $('carPlate').addEventListener('input', function () { $('carField').classList.remove('bad'); updateActions(); });
-  $('phone').addEventListener('input', function () { updateActions(); lookupLoyalty(); });
+  $('phone').addEventListener('input', function () { lastLoy = null; updateWant(); updateActions(); lookupLoyalty(); });
   try { var sp = localStorage.getItem('alala_phone'); if (sp) { $('phone').value = sp; } } catch (e) {}
 
   // A table QR code links to the page with #table-5 (or #t5) at the end; it fills the table number.
