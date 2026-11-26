@@ -79,6 +79,10 @@ textarea{padding:10px 12px;min-height:60px;width:100%}
 .redeem.applyb{flex:1 1 100%;justify-content:center;padding:12px;border:2px solid var(--gold);border-radius:12px;font-size:15px;font-weight:700;background:rgba(217,184,97,.08);text-align:center}
 .redeem.applyb input{width:26px;height:26px}
 .redeem.applyb:has(input:checked){background:var(--gold);color:var(--on-gold)}
+.callbar{position:fixed;left:0;right:0;bottom:0;z-index:80;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px));background:var(--gold);color:var(--on-gold);box-shadow:0 -6px 24px rgba(0,0,0,.5)}
+.callbar .cr{display:flex;align-items:center;gap:10px;padding:4px 0;font-weight:700;font-size:17px}
+.callbar .cr span{flex:1}
+.callbar .cr button{min-height:40px;padding:0 16px;border-radius:10px;border:2px solid var(--on-gold);background:transparent;color:var(--on-gold);font-weight:700}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .acts .btn{flex:1 1 auto;min-width:96px}
 .empty{padding:60px 0;text-align:center;color:var(--muted)}
@@ -227,7 +231,7 @@ svg.chart .bar2{fill:#7fb2ff}
 <button class="sbtn" id="pmode" type="button">🖨 RawBT 58mm</button>
 <button class="sbtn" id="sound" type="button">🔔 On</button>
 <button class="sbtn" id="logout" type="button">Exit · خروج</button>
-<button class="sbtn" id="ver" type="button" title="Update · تحديث">v9 · 🔄</button>
+<button class="sbtn" id="ver" type="button" title="Update · تحديث">v11 · 🔄</button>
 </div></header>
 
 <main class="wrap">
@@ -285,6 +289,7 @@ svg.chart .bar2{fill:#7fb2ff}
 <button class="btn sm" data-bk="next" type="button">▶</button>
 <button class="btn sm" data-bk="today" type="button">Today · اليوم</button>
 <button class="btn primary" data-bk="new" type="button">＋ New booking · حجز جديد</button>
+<button class="btn" data-bk="link" type="button">🔗 Booking link · رابط الحجز</button>
 </div>
 <div class="bkgrid" id="bkOut"></div>
 </section>
@@ -323,6 +328,7 @@ svg.chart .bar2{fill:#7fb2ff}
 <div id="rOut"></div>
 </section>
 </main>
+<div class="callbar" id="callBar" hidden></div>
 </div>
 
 <div id="invoice" aria-hidden="true"></div>
@@ -363,8 +369,8 @@ svg.chart .bar2{fill:#7fb2ff}
     get({ action: 'config', pin: p }).then(function (d) {
       if (!d || !d.ok) { pin = ''; try { sessionStorage.removeItem('alala_pin'); } catch (e) {} if (!silent) showLoginErr('Wrong PIN · الرمز غير صحيح'); return; }
       cfg = d; STAMPS = d.stampsForFree || STAMPS;
-      if (APP) { var wv = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1]; if (wv && +wv < 84) { var wb = $('ver'); wb.textContent = 'WebView ' + wv + ' قديم · حدّثه'; wb.style.cssText = 'pointer-events:none;color:#ffcc66;border-color:#ffcc66'; } }
-      if (!(d.ver >= 9)) { var vb = $('ver'); vb.textContent = 'v9 · ⚠ Apps Script قديم · حدّثه'; vb.style.cssText = 'color:#ff8a7a;border-color:#ff8a7a'; }
+      if (APP) { var wv = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1]; if (wv && +wv < 84) { $('ver').title = 'WebView ' + wv + ' (old) · Update · تحديث'; } }
+      if (!(d.ver >= 11)) { var vb = $('ver'); vb.textContent = 'v11 · ⚠ Apps Script قديم · حدّثه'; vb.style.cssText = 'color:#ff8a7a;border-color:#ff8a7a'; }
       try { sessionStorage.setItem('alala_pin', p); } catch (e) {}
       $('login').hidden = true; $('app').hidden = false;
       initAudio(); renderPause(); posInit(); refresh(); timer = setInterval(refresh, 6000); bkInit();
@@ -502,7 +508,23 @@ svg.chart .bar2{fill:#7fb2ff}
     $('nActive').textContent = n; $('nActive').hidden = !n;
     document.title = (n ? '(' + n + ') ' : '') + 'alala cashier';
   }
+  var callSeen = {}, callFirst = true;
+  function renderCalls(list) {
+    var bar = $('callBar'), fresh = false;
+    list.forEach(function (c) { if (!callSeen[c.id]) { callSeen[c.id] = 1; if (!callFirst) fresh = true; } });
+    callFirst = false;
+    if (fresh) { beep(); setTimeout(beep, 700); }
+    bar.hidden = !list.length;
+    bar.innerHTML = list.map(function (c) { return '<div class="cr"><span>🛎 طاولة ' + esc(c.table) + ' تنادي · Table ' + esc(c.table) + ' is calling</span><button type="button" data-cdone="' + c.id + '">✓ تم · Done</button></div>'; }).join('');
+  }
+  $('callBar').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-cdone]'); if (!b) return;
+    var row = b.closest('.cr'); if (row) row.parentNode.removeChild(row); if (!$('callBar').children.length) $('callBar').hidden = true;
+    post({ action: 'calldone', id: b.getAttribute('data-cdone') }).catch(function () {});
+  });
+  function pollCalls() { get({ action: 'calls', pin: pin }).then(function (d) { if (d && d.ok) renderCalls(d.calls || []); }).catch(function () {}); }
   function refresh() {
+    pollCalls();
     if (busy) return;
     get({ action: 'orders', pin: pin }).then(function (d) {
       if (!d || !d.ok) { if (d && d.error === 'pin') $('logout').click(); return; }
@@ -607,7 +629,9 @@ svg.chart .bar2{fill:#7fb2ff}
     var h = '<div class="card bkc st-' + b.status + '"><div class="hd"><b style="font-size:17px">' + bkFmt(b.start) + ' – ' + bkEnd(b.start + b.mins) + '</b><span class="flag">' + esc(BK_ST[b.status] || b.status) + '</span></div>';
     h += '<div><b>#' + b.id + ' · ' + esc(b.name) + '</b>' + (b.phone ? ' · <a href="tel:+' + esc(b.phone) + '" style="color:var(--gold)">+' + esc(b.phone) + '</a>' : '') + '<br><span style="color:var(--muted);font-size:13px">' + esc((BK_SRC[b.source] || b.source).split(' · ')[0]) + ' · ' + (b.mins / 60) + 'h</span></div>';
     if (b.noteEn || b.note) h += '<div class="bkn"><b>' + esc(b.noteEn || b.note) + '</b>' + (b.noteEn ? '<span class="ar" lang="ar" dir="rtl">' + esc(b.note) + '</span>' : '') + '</div>';
-    if (b.extra) h += '<div class="bkx">💰 Due · المطلوب: ' + bkOmr(b.extra) + ' OMR <span style="font-weight:400;color:var(--muted)">(' + (b.mins / 60) + 'h)</span></div>';
+    if (b.extra) h += '<div class="bkx">💰 Due · المطلوب: ' + bkOmr(b.extra) + ' OMR <span style="font-weight:400;color:var(--muted)">(' + (b.mins / 60) + 'h)</span>' +
+      (b.paidOrder ? ' <b style="color:#7ddc9a">✓ Paid · مدفوع (#' + b.paidOrder + ')</b>' : (b.status === 'cancelled' || b.status === 'noshow') ? '' :
+        ' <button class="btn ok sm" data-bk="bpay" data-m="cash" data-id="' + b.id + '" type="button">💵 Cash · كاش</button> <button class="btn ok sm" data-bk="bpay" data-m="card" data-id="' + b.id + '" type="button">💳 Card · فيزا</button>') + '</div>';
     h += '<div class="acts">';
     if (b.status === 'confirmed') h += '<button class="btn ok sm" data-bk="st" data-id="' + b.id + '" data-st="arrived">Arrived · وصل</button><button class="btn sm" data-bk="st" data-id="' + b.id + '" data-st="noshow">No-show · لم يحضر</button>';
     if (b.status === 'arrived') h += '<button class="btn primary sm" data-bk="st" data-id="' + b.id + '" data-st="done">Done · انتهى</button>';
@@ -632,7 +656,7 @@ svg.chart .bar2{fill:#7fb2ff}
   }
   function bkOpts(from, to, step, sel, labelFn) { var o = ''; for (var v = from; v <= to; v += step) o += '<option value="' + v + '"' + (v === sel ? ' selected' : '') + '>' + labelFn(v) + '</option>'; return o; }
   function openBooking(b) {
-    var isEdit = !!b, d = b || { date: bk.date || bk.today, room: 'A', start: 1080, mins: 120, name: '', phone: '', note: '', source: 'call' };
+    var isEdit = !!b, d = b || { date: bk.date || bk.today, room: 'A', start: 1080, mins: 60, name: '', phone: '', note: '', source: 'call' };
     var srcs = ['call', 'instagram', 'whatsapp', 'walkin'].map(function (k) { return '<option value="' + k + '"' + (d.source === k ? ' selected' : '') + '>' + BK_SRC[k] + '</option>'; }).join('');
     openModal('<h3>' + (isEdit ? '✏ Booking #' + d.id + ' · تعديل الحجز' : '＋ New booking · حجز جديد') + '</h3>' +
       '<label class="bkl">Date · التاريخ<input type="date" id="bfDate" value="' + esc(d.date) + '"></label>' +
@@ -673,6 +697,25 @@ svg.chart .bar2{fill:#7fb2ff}
     if (a === 'prev' || a === 'next') { bk.date = bkShift(bk.date || bk.today, a === 'next' ? 1 : -1); renderBookings(); }
     else if (a === 'today') { bk.date = bk.today; renderBookings(); }
     else if (a === 'new') openBooking(null);
+    else if (a === 'bpay' && b) {
+      if (!confirm('Receive ' + bkOmr(b.extra) + ' OMR (' + (t.dataset.m === 'cash' ? 'cash' : 'card') + ') for room booking #' + b.id + '? · استلام المبلغ؟')) return;
+      t.disabled = true;
+      post({ action: 'bookpay', id: b.id, method: t.dataset.m }).then(function (d) { if (!d.ok) alert(d.error || 'error'); loadBookings(); }).catch(function () { t.disabled = false; });
+    }
+    else if (a === 'link') {
+      var url = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '') + 'rooms.html';
+      var msg = 'احجز قاعتك من هنا · Book your room: ' + url;
+      openModal('<h3>🔗 Booking link · رابط حجز القاعات</h3><input id="bkUrl" readonly style="width:100%;font-size:16px;padding:10px;direction:ltr" value="' + esc(url) + '">' +
+        '<div class="bar" style="margin-top:10px"><button class="btn primary" id="bkCopy" type="button">📋 Copy · نسخ</button>' +
+        '<a class="btn" id="bkWa" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(msg) + '">WhatsApp · واتساب</a>' +
+        '<button class="btn" id="bkClose" type="button">Close · إغلاق</button></div><p id="bkMsg" style="color:var(--muted);margin:8px 0 0"></p>');
+      $('bkClose').onclick = closeModal;
+      $('bkCopy').onclick = function () {
+        var i = $('bkUrl'), ok = false; i.focus(); i.select(); try { i.setSelectionRange(0, 999); ok = document.execCommand('copy'); } catch (x) {}
+        if (!ok && navigator.clipboard) { navigator.clipboard.writeText(url); ok = true; }
+        $('bkMsg').textContent = ok ? 'Copied ✓ · تم النسخ' : 'Press and hold the link to copy · اضغط مطولًا على الرابط للنسخ';
+      };
+    }
     else if (a === 'edit' && b) openBooking(b);
     else if (a === 'print' && b) printBooking(b);
     else if (a === 'st' && b) {
@@ -919,18 +962,19 @@ svg.chart .bar2{fill:#7fb2ff}
     var c = document.createElement('canvas'); c.width = W; c.height = 5000;
     var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, c.height); x.fillStyle = '#000'; x.textBaseline = 'alphabetic';
     var y = 6;
-    function font(z, b) { x.font = (b ? 'bold ' : '') + Math.round(z * S) + 'px ' + FF; }
-    function lh(z) { return Math.round(z * S * 1.35); }
-    function asc(z) { return Math.round(z * S * 1.0); }
+    function font(z, b) { x.font = (b === 0 ? '' : 'bold ') + Math.round((z + 2) * S) + 'px ' + FF; x.lineWidth = Math.max(1, S * 0.5); x.strokeStyle = '#000'; x.lineJoin = 'round'; }
+    function put(t, px, py) { x.fillText(t, px, py); x.strokeText(t, px, py); }
+    function lh(z) { return Math.round((z + 2) * S * 1.4); }
+    function asc(z) { return Math.round((z + 2) * S * 1.0); }
     function wrap(t, maxW) {
       var words = String(t).split(' '), lines = [], cur = '';
       words.forEach(function (w) { var n = cur ? cur + ' ' + w : w; if (cur && x.measureText(n).width > maxW) { lines.push(cur); cur = w; } else cur = n; });
       if (cur) lines.push(cur); return lines;
     }
-    function text(t, z, b, al) { font(z, b); x.textAlign = al; wrap(t, W - 2 * pad).forEach(function (l) { x.fillText(l, al === 'center' ? W / 2 : al === 'right' ? W - pad : pad, y + asc(z)); y += lh(z); }); }
+    function text(t, z, b, al) { font(z, b); x.textAlign = al; wrap(t, W - 2 * pad).forEach(function (l) { put(l, al === 'center' ? W / 2 : al === 'right' ? W - pad : pad, y + asc(z)); y += lh(z); }); }
     function row(l, r, z, b) {
-      font(z, b); x.textAlign = 'right'; x.fillText(r, W - pad, y + asc(z)); var rw = x.measureText(r).width;
-      x.textAlign = 'left'; var ls = wrap(l, W - 2 * pad - rw - 10); ls.forEach(function (t, i) { x.fillText(t, pad, y + i * lh(z) + asc(z)); }); y += lh(z) * Math.max(1, ls.length);
+      font(z, b); x.textAlign = 'right'; put(r, W - pad, y + asc(z)); var rw = x.measureText(r).width;
+      x.textAlign = 'left'; var ls = wrap(l, W - 2 * pad - rw - 10); ls.forEach(function (t, i) { put(t, pad, y + i * lh(z) + asc(z)); }); y += lh(z) * Math.max(1, ls.length);
     }
     function hr() { y += 3; for (var i = pad; i < W - pad; i += 8) x.fillRect(i, y, 4, 2); y += 9; }
     function run(logos) {
@@ -951,7 +995,7 @@ svg.chart .bar2{fill:#7fb2ff}
       var H = y + 8, px = x.getImageData(0, 0, W, H).data, bw = W / 8, bits = new Uint8Array(bw * H);
       for (var j = 0; j < H; j++) for (var i2 = 0; i2 < W; i2++) {
         var o = (j * W + i2) * 4;
-        if (px[o] * 0.3 + px[o + 1] * 0.59 + px[o + 2] * 0.11 < 150) bits[j * bw + (i2 >> 3)] |= 0x80 >> (i2 & 7);
+        if (px[o] * 0.3 + px[o + 1] * 0.59 + px[o + 2] * 0.11 < 190) bits[j * bw + (i2 >> 3)] |= 0x80 >> (i2 & 7);
       }
       var out = [0x1B, 0x40], BAND = 128;
       for (var y0 = 0; y0 < H; y0 += BAND) {
@@ -995,7 +1039,7 @@ svg.chart .bar2{fill:#7fb2ff}
     R.push({ k: 'hr' }, { k: 'row', l: 'المجموع · Subtotal', r: f3(o.subtotal) });
     discParts(o).forEach(function (d) { R.push({ k: 'row', l: d.l, r: '-' + f3(d.v) }); });
     R.push({ k: 'row', l: 'الضريبة · VAT 5%', r: f3(o.vat) }, { k: 'row', l: 'الإجمالي · Total', r: f3(o.total) + ' ' + CUR, z: 20, b: 1 }, { k: 'hr' },
-      { k: 'row', l: 'الدفع · Payment', r: o.payment === 'cash' ? 'كاش · Cash' : 'فيزا · Card' }, { k: 'gap' }, (o.loyalty && o.phone ? (o.loyalty.free > 0 ? { k: 'c', t: 'هديتك تستاهلها! مشروبك القادم مجاني · Your next drink is FREE', z: 16, b: 1 } : { k: 'c', t: 'أختامك ' + o.loyalty.stamps + '/' + STAMPS + ' · باقي ' + (STAMPS - o.loyalty.stamps) + ' لمشروب مجاني · ' + (STAMPS - o.loyalty.stamps) + ' to a free drink', z: 14 }) : { k: 'gap' }), { k: 'c', t: 'شكراً لزيارتكم · Thank you', z: 14 }, { k: 'gap' }, { k: 'c', t: 'من يشرب القهوة ليس وحيداً', z: 17, b: 1 }, { k: 'logo', src: 'en', h: 44 }, { k: 'gap' });
+      { k: 'row', l: 'الدفع · Payment', r: o.payment === 'cash' ? 'كاش · Cash' : 'فيزا · Card' }, { k: 'gap' }, (o.loyalty && o.phone ? (o.loyalty.free > 0 ? { k: 'c', t: 'هديتك تستاهلها! مشروبك القادم مجاني · Your next drink is FREE', z: 16, b: 1 } : { k: 'c', t: 'Stamps ' + o.loyalty.stamps + '/' + STAMPS + ' · ' + (STAMPS - o.loyalty.stamps) + ' more for a free drink', z: 14 }) : { k: 'gap' }), { k: 'c', t: 'شكراً لزيارتكم · Thank you', z: 14 }, { k: 'gap' }, { k: 'c', t: 'من يشرب القهوة ليس وحيداً', z: 17, b: 1 }, { k: 'logo', src: 'en', h: 44 }, { k: 'gap' });
     rawbtPrint(R);
   }
   function printTicket(o, silent) {
@@ -1175,7 +1219,7 @@ svg.chart .bar2{fill:#7fb2ff}
   function iso(d) { var z = d.getTimezoneOffset() * 60000; return new Date(d - z).toISOString().slice(0, 10); }
   var lastA = null;
   function setRange(kind) {
-    var now = new Date(), from = new Date(), to = new Date();
+    var now = new Date(Date.now() - 9 * 3600000), from = new Date(now), to = new Date(now);   // business day starts 09:00
     if (kind === '7') from.setDate(now.getDate() - 6);
     else if (kind === '30') from.setDate(now.getDate() - 29);
     else if (kind === 'month') from = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1223,7 +1267,7 @@ svg.chart .bar2{fill:#7fb2ff}
         tile('Avg. order · متوسط الطلب', f3(avg), delta(avg, pavg)) + tile('VAT 5% · الضريبة', f3(t.vat)) + tile('Subtotal · قبل الضريبة', f3(t.subtotal)) +
         tile('Discounts · خصومات', f3(t.discount)) + tile('Cash · كاش', f3(t.cash)) + tile('Card · فيزا', f3(t.card)) + '</div>';
       h += '<div class="two"><div class="panelbox"><h3 class="sec" style="margin-top:0">Sales by day · المبيعات يومياً</h3>' + vbars(d.days.map(function (x) { return { l: x.date, v: x.total }; }), function (l) { return l.slice(5); }) + '</div>' +
-        '<div class="panelbox"><h3 class="sec" style="margin-top:0">Orders by hour · الطلبات حسب الساعة</h3>' + vbars(d.hours.map(function (x) { return { l: x.h + ':00', v: x.orders, t: x.orders + ' orders' }; }), function (l) { return parseInt(l, 10) % 3 === 0 ? l.replace(':00', '') : ''; }, 'bar2') + '</div></div>';
+        '<div class="panelbox"><h3 class="sec" style="margin-top:0">Orders by hour · الطلبات حسب الساعة</h3>' + vbars(d.hours.slice(9).concat(d.hours.slice(0, 9)).map(function (x) { return { l: x.h + ':00', v: x.orders, t: x.orders + ' orders' }; }), function (l) { return parseInt(l, 10) % 3 === 0 ? l.replace(':00', '') : ''; }, 'bar2') + '</div></div>';
       var wn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       h += '<div class="two"><div class="panelbox"><h3 class="sec" style="margin-top:0">By weekday · حسب اليوم</h3>' + vbars(d.weekdays.map(function (x) { return { l: wn[x.d - 1], v: x.total }; })) + '</div>' +
         '<div class="panelbox"><h3 class="sec" style="margin-top:0">Order types · أنواع الطلبات</h3>' + hbars(d.types.map(function (x) { return { l: TYPE_NAME[x.type] || x.type, v: x.total, t: f3(x.total) + ' (' + x.orders + ')' }; })) +
@@ -1249,7 +1293,7 @@ svg.chart .bar2{fill:#7fb2ff}
   setRange('today');
 
   // ---- one-tap update: clears caches and reloads the newest page; also detects when a newer version is published ----
-  var BUILD = '1795551018';
+  var BUILD = '1795670341';
   function doUpdate() {
     try { if (window.caches && caches.keys) caches.keys().then(function (k) { k.forEach(function (x) { caches.delete(x); }); }); } catch (e) {}
     try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) navigator.serviceWorker.getRegistrations().then(function (r) { r.forEach(function (x) { x.unregister(); }); }).catch(function () {}); } catch (e) {}

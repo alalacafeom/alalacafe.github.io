@@ -56,13 +56,37 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
 .dates{display:flex;gap:8px;margin-top:10px}.dates input{flex:1;min-width:0;min-height:42px;padding:0 8px;background:var(--bg);border:1px solid var(--line2);border-radius:10px;color-scheme:dark}
 .two{display:flex;gap:8px;margin-top:10px}.two button{flex:1;min-height:46px;border-radius:12px;border:1px solid var(--gold);background:var(--gold);color:var(--on-gold);font-weight:600}.two button.alt{background:transparent;color:var(--gold)}
 #rep{display:none}
+@page{size:A4;margin:11mm}
 @media print{
-  body{background:#fff;color:#000}header,#login,#app{display:none!important}
-  #rep{display:block!important;padding:0;color:#000;font-size:12px}
-  #rep h1{font-size:20px;margin:0 0 2px}#rep .sub{color:#555;margin-bottom:12px}
-  #rep table{width:100%;border-collapse:collapse;margin:6px 0 14px}#rep th,#rep td{border-bottom:1px solid #ccc;padding:5px 6px;text-align:start}#rep th{background:#eee}
-  #rep .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 14px}#rep .kp div{border:1px solid #bbb;padding:8px;border-radius:6px}#rep .kp b{display:block;font-size:16px}
-  #rep h3{font-size:13px;margin:12px 0 4px;border-bottom:2px solid #000}
+  html{color-scheme:light!important}html,body{background:#fff!important;color:#000}header,#login,#app{display:none!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #rep{display:block!important;color:#111;font-size:11px;line-height:1.35}
+  #rep .hd{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #111;padding-bottom:8px;margin-bottom:10px}
+  #rep .hd img{height:34px;filter:brightness(0)}
+  #rep .hd .tt{text-align:end}#rep h1{font-size:17px;margin:0}#rep .sub{color:#555;font-size:11px}
+  #rep .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 6px}
+  #rep .kp>div{border:1px solid #bbb;border-radius:6px;padding:6px 8px}
+  #rep .kp .k{font-size:9.5px;color:#555}#rep .kp b{display:block;font-size:15px;margin-top:1px}
+  #rep .kp .big{grid-column:span 2;background:#111;color:#fff;border-color:#111}#rep .kp .big .k{color:#ccc}#rep .kp .big b{font-size:22px}
+  #rep .dl{font-size:10px;font-weight:600}#rep .up{color:#0a7a2f}#rep .dn{color:#b3261e}#rep .big .up{color:#8fe3a8}#rep .big .dn{color:#ffb4ab}
+  #rep .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+  #rep h3{font-size:11.5px;margin:10px 0 4px;padding-bottom:2px;border-bottom:1.5px solid #111;text-transform:uppercase;letter-spacing:.04em}
+  #rep .row2 h3{margin-top:0}
+  #rep table{width:100%;border-collapse:collapse;margin:0 0 4px}
+  #rep th,#rep td{border-bottom:1px solid #ddd;padding:3px 5px;text-align:start;font-size:10.5px}
+  #rep th{background:#eee;font-size:9.5px}#rep td.n,#rep th.n{text-align:end;font-variant-numeric:tabular-nums}
+  #rep tr{break-inside:avoid;page-break-inside:avoid}
+  #rep .pay{display:flex;height:14px;border-radius:7px;overflow:hidden;border:1px solid #111;margin:4px 0}
+  #rep .pay i{display:block;height:100%}
+  #rep .lg{font-size:10px;display:flex;justify-content:space-between}
+  #rep .hrs{display:flex;align-items:flex-end;gap:2px;height:64px;border-bottom:1px solid #111}
+  #rep .hrs i{flex:1;background:#555;min-height:1px;display:block}#rep .hrs i.pk{background:#111}
+  #rep .hl{display:flex;gap:2px;font-size:8px;color:#555}#rep .hl span{flex:1;text-align:center}
+  #rep .bar{display:inline-block;height:6px;background:#555;border-radius:3px;vertical-align:middle}
+  #rep .ft{margin-top:10px;padding-top:6px;border-top:1px solid #bbb;color:#777;font-size:9px;display:flex;justify-content:space-between}
+  #rep section{break-inside:avoid;page-break-inside:avoid}
+  #rep .pg2{break-before:page;page-break-before:always}
+  #rep .free{font-weight:700;background:#fff3c4}#rep .ol td{font-size:9.5px;vertical-align:top}#rep thead{display:table-header-group}
 }
 </style>
 </head>
@@ -113,8 +137,7 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
       tile('💵 Cash · كاش', f3(t.cash)) + tile('💳 Card · فيزا', f3(t.card)) +
       tile('Open now · مفتوحة الآن', d.open.n, '<div class="d flat">' + f3(d.open.total) + ' OMR</div>') +
       tile('Rooms today · حجوزات', d.bookingsToday) + '</div>';
-    h += '<h2>Card machine check · مطابقة جهاز البطاقات</h2><div class="box"><div style="color:var(--muted);font-size:13px;margin-bottom:6px">Enter the machine total · اكتب مجموع الجهاز</div><input class="n3" id="mc" type="text" inputmode="decimal" placeholder="0.000"><div class="diff" id="mcd"></div></div>';
-    var hrs = d.hours.filter(function (x) { return x.h >= 6 || x.orders; }).map(function (x) { return { l: String(x.h), v: x.total }; });
+    var hrs = rot(d.hours).map(function (x) { return { l: String(x.h), v: x.total }; });
     h += '<h2>By hour · حسب الساعة</h2><div class="box">' + bars(hrs, String(new Date().getHours())) + '</div>';
     h += '<h2>Last 7 days · آخر ٧ أيام — ' + f3(d.weekTotal.total) + '</h2><div class="box">' + bars(d.week.map(function (x) { return { l: x.date.slice(5), v: x.total }; }), d.today.slice(5)) + '</div>';
     h += '<div class="tiles" style="margin-top:10px">' + tile('This month · هذا الشهر', f3(d.month.total), '<div class="d flat">' + d.month.orders + ' orders</div>') +
@@ -123,8 +146,10 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
     h += '<h2>Top items today · الأكثر مبيعاً</h2><div class="box">' + (d.items.length ? d.items.map(function (x) {
       return '<div class="hb"><span class="n">' + esc(x.en) + '</span><span class="g"><i style="width:' + (mx ? x.qty / mx * 100 : 0) + '%"></i></span><span class="q">' + x.qty + '</span></div>'; }).join('') : '<div class="empty">—</div>') + '</div>';
     h += '<h2>Alerts · تنبيهات (3 days)</h2><div class="box">' + (d.alerts.length ? d.alerts.map(function (a) {
-      var tg = a.k === 'cancel' ? '<span class="tag warn">❌ Cancelled · ملغي</span>' : a.k === 'free' ? '<span class="tag gold">🎁 Free drink · مجاني</span>' : '<span class="tag warn">🏷 ' + a.pct + '% discount · خصم</span>';
-      return '<div class="row"><div class="t">' + tg + ' #' + a.id + (a.reason ? ' · ' + esc(a.reason) : '') + '<small>' + ago(a.at) + (a.phone ? ' · +' + esc(a.phone) : '') + '</small></div><b>' + f3(a.total) + '</b></div>'; }).join('') : '<div class="empty">All clear ✓ · لا شيء</div>') + '</div>';
+      var x = a.x || a, tg = a.k === 'cancel' ? '<span class="tag warn">❌ Cancelled · ملغي</span>' : a.k === 'free' ? '<span class="tag gold">🎁 Free drink · مجاني</span>' : a.k === 'edit' ? '<span class="tag warn">✏️ Edited · معدّل ×' + a.n + '</span>' : '<span class="tag warn">🏷 ' + a.pct + '% discount · خصم' + (a.discount ? ' (−' + f3(a.discount) + ')' : '') + '</span>';
+      var who = (TYPE[x.type] || x.type || '') + (x.table ? ' ' + esc(x.table) : '') + (x.name ? ' · ' + esc(x.name) : '') + (a.phone ? ' · +' + esc(a.phone) : '');
+      return '<div class="row"><div class="t">' + tg + ' #' + a.id + (a.reason ? ' · <b>' + esc(a.reason) + '</b>' : '') +
+        (x.items ? '<div style="margin:3px 0;color:var(--fg)">' + esc(x.items) + '</div>' : '') + '<small>' + ago(a.at) + ' · ' + who + '</small></div><b>' + f3(a.total) + '</b></div>'; }).join('') : '<div class="empty">All clear ✓ · لا شيء</div>') + '</div>';
     h += '<h2>Latest paid · آخر المدفوعات</h2><div class="box">' + (d.recent.length ? d.recent.map(function (o) {
       return '<div class="row"><div class="t">#' + o.id + ' · ' + (TYPE[o.type] || o.type) + (o.table ? ' ' + esc(o.table) : '') + '<small>' + tm(o.paidAt) + ' · ' + o.items + ' items · ' + (o.payment === 'card' ? '💳' : '💵') + (o.discount ? ' · −' + f3(o.discount) : '') + '</small></div><b>' + f3(o.total) + '</b></div>'; }).join('') : '<div class="empty">—</div>') + '</div>';
     h += '<h2>Reports · التقارير</h2><div class="box"><div class="chips" id="rch">' +
@@ -136,13 +161,12 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
       '<div class="empty" id="rmsg" style="padding:6px 0 0;font-size:12px"></div></div>';
     $('out').innerHTML = h;
     initReports();
-    var mc = $('mc'); if (mc) { mc.addEventListener('input', function () {
-      var v = parseFloat(String(mc.value).replace(',', '.')); if (isNaN(v)) { $('mcd').textContent = ''; return; }
-      var df = v - d.day.card; $('mcd').innerHTML = df === 0 ? '<span class="up">✓ Match · مطابق</span>' : '<span class="' + (Math.abs(df) < 0.001 ? 'up' : 'down') + '">System card: ' + f3(d.day.card) + ' · Diff: ' + (df > 0 ? '+' : '') + f3(df) + '</span>'; }); }
   }
+  var LOGO_SRC = (document.querySelector('#login img') || {}).src || '';
+  function rot(a) { return a.slice(9).concat(a.slice(0, 9)); }   // business day starts at 09:00
   function iso(d) { var z = d.getTimezoneOffset() * 60000; return new Date(d - z).toISOString().slice(0, 10); }
   function setR(k) {
-    var n = new Date(), f = new Date(n), t = new Date(n);
+    var n = new Date(Date.now() - 9 * 3600000), f = new Date(n), t = new Date(n);
     if (k === 'yest') { f.setDate(n.getDate() - 1); t = new Date(f); }
     else if (k === '7') f.setDate(n.getDate() - 6);
     else if (k === 'month') f = new Date(n.getFullYear(), n.getMonth(), 1);
@@ -157,19 +181,46 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
       if (!d || !d.ok) { $('rmsg').textContent = 'Error · خطأ'; return; } $('rmsg').textContent = ''; cb(d);
     }).catch(function () { $('rmsg').textContent = 'No connection · لا يوجد اتصال'; });
   }
+  var SEC = { special: 'Special · ألالا', hot: 'Hot · ساخنة', cold: 'Cold · باردة', brew: 'Brew · مختصة', blends: 'Blends · منعشات', pastries: 'Pastries · مخبوزات', others: 'Others · أخرى', addons: 'Add-ons · إضافات', room: 'Rooms · القاعات' };
+  function pct(c, p) { if (!p) return ''; var x = Math.round((c - p) / p * 100); return '<span class="dl ' + (x >= 0 ? 'up' : 'dn') + '">' + (x >= 0 ? '▲ ' : '▼ ') + Math.abs(x) + '% vs previous · عن السابق</span>'; }
   function repHTML(d) {
-    var t = d.totals, p = d.prev, c = d.customers, avg = t.orders ? t.total / t.orders : 0;
-    var kp = function (k, v) { return '<div>' + k + '<b>' + v + '</b></div>'; };
-    var x = '<h1>alala cafe — Sales report · تقرير المبيعات</h1><div class="sub">' + esc(d.from) + (d.to !== d.from ? ' → ' + esc(d.to) : '') + ' · ' + new Date().toLocaleString() + '</div>' +
-      '<div class="kp">' + kp('Sales · المبيعات', f3(t.total)) + kp('Orders · الطلبات', t.orders) + kp('Avg. order · المتوسط', f3(avg)) + kp('Previous period · الفترة السابقة', f3(p.total)) +
-      kp('Cash · كاش', f3(t.cash)) + kp('Card · فيزا', f3(t.card)) + kp('VAT · الضريبة', f3(t.vat)) + kp('Discounts · خصومات', f3(t.discount)) + '</div>';
-    x += '<h3>Daily · يومي</h3><table><tr><th>Date</th><th>Orders</th><th>Subtotal</th><th>Disc.</th><th>VAT</th><th>Total</th><th>Cash</th><th>Card</th></tr>' +
-      d.days.map(function (r) { return '<tr><td>' + r.date + '</td><td>' + r.orders + '</td><td>' + f3(r.subtotal) + '</td><td>' + f3(r.discount) + '</td><td>' + f3(r.vat) + '</td><td>' + f3(r.total) + '</td><td>' + f3(r.cash) + '</td><td>' + f3(r.card) + '</td></tr>'; }).join('') + '</table>';
-    x += '<h3>Top items · الأكثر مبيعاً</h3><table><tr><th>Item</th><th>Qty</th><th>Sales</th></tr>' +
-      d.items.slice(0, 20).map(function (r) { return '<tr><td>' + esc(r.en) + (r.ar ? ' · ' + esc(r.ar) : '') + '</td><td>' + r.qty + '</td><td>' + f3(r.sales) + '</td></tr>'; }).join('') + '</table>';
-    x += '<h3>Order types · أنواع الطلبات</h3><table><tr><th>Type</th><th>Orders</th><th>Total</th></tr>' +
-      d.types.map(function (r) { return '<tr><td>' + (TYPE[r.type] || r.type) + '</td><td>' + r.orders + '</td><td>' + f3(r.total) + '</td></tr>'; }).join('') + '</table>';
-    x += '<h3>Customers · العملاء</h3><p>New ' + c.fresh + ' · Returning ' + c.returning + ' · With phone ' + c.withPhone + ' · Anonymous ' + c.anonymous + '</p>';
+    var t = d.totals, p = d.prev, c = d.customers, ex = d.extra || {}, avg = t.orders ? t.total / t.orders : 0, pav = p.orders ? p.total / p.orders : 0;
+    var kp = function (k, v, extra, cls) { return '<div class="' + (cls || '') + '"><div class="k">' + k + '</div><b>' + v + '</b>' + (extra || '') + '</div>'; };
+    var x = '<div class="hd"><img src="' + LOGO_SRC + '" alt=""><div class="tt"><h1>Sales report · تقرير المبيعات</h1><div class="sub">' + esc(d.from) + (d.to !== d.from ? ' → ' + esc(d.to) : '') + ' &nbsp;·&nbsp; alala cafe</div></div></div>';
+    x += '<div class="kp">' + kp('Total sales · إجمالي المبيعات (OMR)', f3(t.total), pct(t.total, p.total), 'big') + kp('Orders · الطلبات', t.orders, pct(t.orders, p.orders)) + kp('Avg. order · متوسط الطلب', f3(avg), pct(avg, pav)) + '</div>';
+    x += '<div class="kp">' + kp('Cash · كاش', f3(t.cash)) + kp('Card · فيزا', f3(t.card)) + kp('VAT 5% · الضريبة', f3(t.vat)) + kp('Discounts · خصومات', f3(t.discount)) + '</div>';
+    x += '<div class="kp">' + kp('Free drinks · مشروبات مجانية', (ex.free || 0) + ' <small style="font-size:10px;font-weight:400">(' + f3(ex.freeValue || 0) + ')</small>') + kp('Cancelled · ملغية', (ex.cancelled || 0) + ' <small style="font-size:10px;font-weight:400">(' + f3(ex.cancelledTotal || 0) + ')</small>') +
+      kp('Net before VAT · قبل الضريبة', f3(t.subtotal - t.discount)) + kp('Previous period · الفترة السابقة', f3(p.total)) + '</div>';
+    var cp = t.total ? Math.round(t.cash / t.total * 100) : 0;
+    x += '<section><h3>Payment · طريقة الدفع</h3><div class="pay"><i style="width:' + cp + '%;background:#111"></i><i style="width:' + (t.total ? 100 - cp : 0) + '%;background:#999"></i></div><div class="lg"><span>■ Cash · كاش ' + f3(t.cash) + ' (' + cp + '%)</span><span>■ Card · فيزا ' + f3(t.card) + ' (' + (t.total ? 100 - cp : 0) + '%)</span></div></section>';
+    var mx = 0, pk = -1; d.hours.forEach(function (h) { if (h.total > mx) { mx = h.total; pk = h.h; } });
+    var hs = rot(d.hours);
+    x += '<div class="row2"><section><h3>Sales by hour · حسب الساعة' + (pk >= 0 && mx ? ' — peak ' + pk + ':00' : '') + '</h3><div class="hrs">' + hs.map(function (h) { return '<i class="' + (h.h === pk ? 'pk' : '') + '" style="height:' + (mx ? Math.max(1, Math.round(h.total / mx * 60)) : 1) + 'px" title=""></i>'; }).join('') + '</div><div class="hl">' + hs.map(function (h) { return '<span>' + (h.h % 3 === 0 ? h.h : '') + '</span>'; }).join('') + '</div></section>' +
+      '<section><h3>Order types · أنواع الطلبات</h3><table>' + d.types.map(function (r) { return '<tr><td>' + (TYPE[r.type] || r.type) + '</td><td class="n">' + r.orders + '</td><td class="n">' + f3(r.total) + '</td></tr>'; }).join('') + '</table>' +
+      '<h3 style="margin-top:8px">Customers · العملاء</h3><div>New · جدد <b>' + c.fresh + '</b> &nbsp; Returning · عائدون <b>' + c.returning + '</b> &nbsp; With phone · بجوال <b>' + c.withPhone + '</b> &nbsp; Anonymous · بدون <b>' + c.anonymous + '</b></div></section></div>';
+    x += '<section><h3>Daily · يومي</h3><table><tr><th>Date</th><th class="n">Orders</th><th class="n">Subtotal</th><th class="n">Disc.</th><th class="n">VAT</th><th class="n">Total</th><th class="n">Cash</th><th class="n">Card</th></tr>' +
+      d.days.map(function (r) { return '<tr><td>' + r.date + '</td><td class="n">' + r.orders + '</td><td class="n">' + f3(r.subtotal) + '</td><td class="n">' + f3(r.discount) + '</td><td class="n">' + f3(r.vat) + '</td><td class="n"><b>' + f3(r.total) + '</b></td><td class="n">' + f3(r.cash) + '</td><td class="n">' + f3(r.card) + '</td></tr>'; }).join('') + '</table></section>';
+    var im = 0; d.items.slice(0, 10).forEach(function (r) { if (r.sales > im) im = r.sales; });
+    var sm = 0; d.sections.forEach(function (r) { if (r.sales > sm) sm = r.sales; });
+    x += '<div class="row2"><section><h3>Top 10 items · الأكثر مبيعاً</h3><table><tr><th>Item</th><th class="n">Qty</th><th class="n">Sales</th></tr>' +
+      d.items.slice(0, 10).map(function (r) { return '<tr><td>' + esc(r.en) + (r.ar ? ' · ' + esc(r.ar) : '') + '</td><td class="n">' + r.qty + '</td><td class="n">' + f3(r.sales) + '</td></tr>'; }).join('') + '</table></section>' +
+      '<section><h3>Categories · الأقسام</h3><table><tr><th>Category</th><th class="n">Qty</th><th class="n">Sales</th></tr>' +
+      d.sections.map(function (r) { return '<tr><td>' + (SEC[r.id] || esc(r.id)) + '<br><span class="bar" style="width:' + (sm ? Math.round(r.sales / sm * 100) : 0) + '%"></span></td><td class="n">' + r.qty + '</td><td class="n">' + f3(r.sales) + '</td></tr>'; }).join('') + '</table></section></div>';
+    var PM = { cash: 'Cash', card: 'Card' };
+    var os = d.orders || [];
+    x += '<div class="pg2"><div class="hd"><img src="' + LOGO_SRC + '" alt=""><div class="tt"><h1>Orders · الطلبات (' + os.length + ')</h1><div class="sub">' + esc(d.from) + (d.to !== d.from ? ' → ' + esc(d.to) : '') + '</div></div></div>' +
+      '<table class="ol"><thead><tr><th>#</th><th>Time · الوقت</th><th>Type</th><th>Items · الأصناف</th><th>Pay</th><th class="n">Disc.</th><th class="n">Total</th></tr></thead><tbody>' +
+      os.map(function (o) {
+        var ty = (TYPE[o.type] || o.type) + (o.table ? ' ' + esc(o.table) : '') + (o.phone ? '<br>…' + esc(o.phone) : '');
+        var note = o.free ? '<br><b>🎁 FREE DRINK · مشروب مجاني (−' + f3(o.freeValue) + ')</b>' : '';
+        return '<tr class="' + (o.free ? 'free' : '') + '"><td>' + o.id + '</td><td>' + (d.from !== d.to ? o.date.slice(5) + ' ' : '') + o.time + '</td><td>' + ty + '</td><td>' + esc(o.items) + note + '</td><td>' + (PM[o.payment] || esc(o.payment)) + '</td><td class="n">' + (o.discount ? f3(o.discount) : '–') + '</td><td class="n"><b>' + f3(o.total) + '</b></td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<div class="lg" style="margin-top:6px"><span>Total · الإجمالي <b>' + f3(t.total) + '</b></span><span>Discounts · الخصومات <b>' + f3(t.discount) + '</b></span><span>Free drinks · مجانية <b>' + (ex.free || 0) + '</b></span></div>';
+    var cl = ex.cancelledList || [];
+    if (cl.length) x += '<section style="margin-top:10px"><h3>❌ Cancelled orders · الطلبات الملغية (' + cl.length + ')</h3><table class="ol"><thead><tr><th>#</th><th>Time</th><th>Type</th><th>Items · الأصناف</th><th>Reason · السبب</th><th class="n">Total</th></tr></thead><tbody>' +
+      cl.map(function (o) { return '<tr><td>' + o.id + '</td><td>' + esc(o.at) + '</td><td>' + (TYPE[o.type] || o.type) + (o.table ? ' ' + esc(o.table) : '') + (o.phone ? '<br>…' + esc(o.phone) : '') + '</td><td>' + esc(o.items) + '</td><td>' + (esc(o.reason) || '—') + '</td><td class="n">' + f3(o.total) + '</td></tr>'; }).join('') + '</tbody></table></section>';
+    x += '</div>';
+    x += '<div class="ft"><span>Generated · أُنشئ: ' + new Date().toLocaleString('en-GB') + '</span><span>alala cafe system</span></div>';
     return x;
   }
   function csvDown(d) {
@@ -177,6 +228,8 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
     d.days.forEach(function (r) { rows.push([r.date, r.orders, f3(r.subtotal), f3(r.discount), f3(r.vat), f3(r.total), f3(r.cash), f3(r.card)]); });
     rows.push([]); rows.push(['Item', 'Qty', 'Sales']);
     d.items.forEach(function (r) { rows.push([r.en, r.qty, f3(r.sales)]); });
+    rows.push([]); rows.push(['#', 'Date', 'Time', 'Type', 'Table', 'Phone(last4)', 'Items', 'Payment', 'Discount', 'Free drink', 'Total']);
+    (d.orders || []).forEach(function (o) { rows.push([o.id, o.date, o.time, o.type, o.table, o.phone, o.items, o.payment, f3(o.discount), o.free ? 'FREE' : '', f3(o.total)]); });
     var csv = '\ufeff' + rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
     var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = 'alala-report-' + d.from + '_' + d.to + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { document.body.removeChild(a); }, 500);
@@ -190,9 +243,8 @@ input.n3{width:100%;min-height:46px;padding:0 12px;background:var(--bg);border:1
   function load() {
     return fetch(API + '?action=owner&pin=' + encodeURIComponent(pin)).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.ok) { if (!ok) { $('err').textContent = 'Wrong PIN · الرمز غير صحيح'; $('err').hidden = false; } else { $('dot').className = 'dot off'; } return false; }
-      var keep = $('mc') ? $('mc').value : '', k1 = $('rf1') ? $('rf1').value : '', k2 = $('rf2') ? $('rf2').value : '';
+      var k1 = $('rf1') ? $('rf1').value : '', k2 = $('rf2') ? $('rf2').value : '';
       ok = true; last = d; $('login').hidden = true; $('app').hidden = false; render(d);
-      if (keep && $('mc')) { $('mc').value = keep; $('mc').dispatchEvent(new Event('input')); }
       if (k1 && $('rf1')) { $('rf1').value = k1; $('rf2').value = k2; var cs = document.querySelectorAll('#rch .chip'); for (var i = 0; i < cs.length; i++) cs[i].setAttribute('aria-pressed', 'false'); }
       var n = new Date(); $('dot').className = 'dot'; $('upd').textContent = 'Live · مباشر — ' + tm(n.toISOString());
       return true;

@@ -73,7 +73,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
   'use strict';
   var CFG = window.ALALA || {}, API = CFG.API_URL || '';
   var DEF = { ok: true, rooms: ['A', 'B'], open: 540, close: 1440, step: 30, min: 60, max: 360, free: 120, rate: 1000, days: 60 };
-  var S = { cfg: DEF, loaded: false, cache: {}, date: '', room: '', start: -1, mins: 120, busy: [], today: '', nowMin: 0, name: '', phone: '', note: '', edit: null, view: 'form', done: null, err: '', sending: false };
+  var S = { cfg: DEF, loaded: false, cache: {}, date: '', room: '', start: -1, mins: 60, busy: [], today: '', nowMin: 0, name: '', phone: '', note: '', edit: null, view: 'form', done: null, err: '', sending: false };
   var app = document.getElementById('app');
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function T(en, ar) { return esc(en) + '<span class="ar" lang="ar" dir="rtl">' + esc(ar) + '</span>'; }
@@ -133,6 +133,7 @@ h1 .ar{font-family:'Reem Kufi','IBM Plex Sans Arabic',sans-serif;font-size:24px}
     c.rooms.forEach(function (r) { h += '<button type="button" class="opt" data-room="' + r + '" aria-pressed="' + (S.room === r) + '">Room ' + r + '<small>قاعة ' + r + '</small></button>'; });
     h += '</div>';
     h += lbl('Duration', 'المدة');
+    h += '<p class="note" style="margin:0 0 8px">Need less? 1 hour is fine — pick only the time you need. <span class="ar" lang="ar" dir="rtl">تحتاج أقل؟ ساعة وحدة تكفي — اختر المدة اللي تحتاجها فقط.</span></p>';
     h += '<div class="grid dur">';
     for (var m = c.min; m <= c.max; m += c.step) {
       var ex = extra(m);
